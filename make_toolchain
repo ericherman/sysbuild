@@ -26,21 +26,19 @@ export CROSS_HOST="$(echo ${MACHTYPE} | \
      sed "s/$(echo ${MACHTYPE} | \
      cut -d- -f2)/cross/")"
 
-LINUX="linux-2.6.36.2.tar.bz2"
-FILE="file-5.04.tar.gz"
+LINUX="linux-2.6.37.tar.bz2"
+FILE="file-5.05.tar.gz"
 NCURSES="ncurses-5.7.tar.gz"
-#GMP="gmp-5.0.1.tar.bz2"
-GMP="gmp-4.3.2.tar.bz2"
+GMP="gmp-5.0.1.tar.bz2"
 MPFR="mpfr-3.0.0.tar.xz"
+MPC="mpc-0.8.2.tar.gz"
 #PPL="ppl-0.11.tar.bz2"
 PPL="ppl-0.10.2.tar.bz2"
-MPC="mpc-0.8.2.tar.gz"
-#CLOOGPPL="cloog-ppl-0.15.10.tar.gz"
-CLOOGPPL="cloog-ppl-0.15.9.tar.gz"
+CLOOGPPL="cloog-ppl-0.15.10.tar.gz"
 #BINUTILS="binutils-2.21.tar.bz2"
 BINUTILS="binutils-2.20.1.tar.bz2"
 #LIBC="glibc-2.12.2.tar.xz"
-LIBC="eglibc-2.12-20100725-r11059.tar.bz2"
+LIBC="eglibc-2.12-r12509.tar.bz2"
 GCC="gcc-4.5.2.tar.bz2"
 
 <<END_OF_DOCS
@@ -60,6 +58,7 @@ export TOOLCHAIN_BUILD="/lfs/build"
 export SOURCES=/lfs/sources
 export PATCHES=/lfs/patches
 export PATH=${CROSSTOOLS}/bin:${PATH}
+export LC_ALL=POSIX
 
 # TODO is "PREFIX" a better name than "CROSSTOOLS"?
 
@@ -94,6 +93,7 @@ TOOLCHAIN_BUILD=${TOOLCHAIN_BUILD}
 SOURCES=${SOURCES}
 PATCHES=${PATCHES}
 PATH=${PATH}
+LC_ALL=${LC_ALL}
 END_OF_MSG
 
 echo ""
@@ -107,6 +107,7 @@ echo "clearing ${CROSSTOOLS} and ${TOOLS} and ${TOOLCHAIN_BUILD}"
 rm -rf ${CROSSTOOLS}/*
 rm -rf ${TOOLS}/*
 rm -rf ${TOOLCHAIN_BUILD}/*
+mkdir -v ${TOOLS}/lib && ln -sv lib ${TOOLS}/lib64
 mkdir -p ${TOOLCHAIN_BUILD}
 pushd ${TOOLCHAIN_BUILD}
 echo ""
@@ -181,6 +182,7 @@ tar xf ${SOURCES}/$NCURSES &&
 pushd ncurses* &&
 echo "NCURSES (tic) patch"
 echo "applying ncurses-5.7-bash_fix-1.patch" &&
+echo " (which fixes an issue with some Bash versions)" &&
 patch -Np1 -i ${PATCHES}/ncurses-5.7-bash_fix-1.patch &&
 echo "NCURSES (tic) configure" &&
 ./configure \
@@ -284,7 +286,6 @@ echo "MPC configure" &&
 LDFLAGS="-Wl,-rpath,${CROSSTOOLS}/lib" \
  ./configure \
     --prefix=${CROSSTOOLS} \
-    --enable-shared \
     --with-mpfr=${CROSSTOOLS} \
     --with-gmp=${CROSSTOOLS} &&
 echo "MPC make" &&
@@ -312,6 +313,10 @@ TODO : can we remove the C++ here?
 END_OF_MSG
 tar xf ${SOURCES}/$PPL &&
 pushd ppl* &&
+echo "The following fixes an issue when detecting newer versions of GMP" &&
+cp -v configure{,.orig} &&
+sed -e "s/__GMP_BITS_PER_MP_LIMB/GMP_LIMB_BITS/g" \
+    configure.orig > configure &&
 echo "PPL configure" &&
 LDFLAGS="-Wl,-rpath,${CROSSTOOLS}/lib" \
  ./configure \
@@ -349,14 +354,17 @@ END_OF_MSG
 tar xf ${SOURCES}/$CLOOGPPL &&
 pushd cloog* &&
 echo "CLOOGPPL patch" &&
-echo " prevent the configure script from setting LD_LIBRARY_PATH when it finds"
-echo " PPL, preventing any conflicts with libraries from the host system" &&
+echo " When CLooG-PPL 0.15.10 was packaged it was missing a few files" &&
+echo " related to Libtool. The following patch adds them back in and" &&
+echo " regenerted Automake and Autoconf." &&
+patch -Np1 -i ${PATCHES}/cloog-ppl-0.15.10-autogen-1.patch &&
+echo " prevent the configure script from setting LD_LIBRARY_PATH when it" &&
+echo " finds PPL, preventing any conflicts with libraries from the host" &&
+echo " system" &&
 cp -v configure{,.orig} &&
 sed "/LD_LIBRARY_PATH=/d" configure.orig > configure &&
 echo "CLOOGPPL configure diff" || exit $?
 diff -u configure.orig configure
-# echo "CLOOGPPL crazy hack-around for m4 breakage" &&
-# patch -Np1 -i ${PATCHES}/cloog-ppl-0.15.10-cheesy_hackaround_m4_breakage-1.patch &&
 echo "CLOOGPPL configure" &&
 LDFLAGS="-Wl,-rpath,${CROSSTOOLS}/lib" \
  ./configure \
@@ -432,8 +440,8 @@ END_OF_MSG
 tar xf ${SOURCES}/$GCC &&
 pushd gcc* &&
 echo "GCC static patch" &&
-echo "applying gcc-4.5.1-pure64_specs-2.patch" &&
-patch -Np1 -i ${PATCHES}/gcc-4.5.1-pure64_specs-2.patch &&
+echo "applying gcc-4.5.2-pure64_specs-1.patch" &&
+patch -Np1 -i ${PATCHES}/gcc-4.5.2-pure64_specs-1.patch &&
 echo "" &&
 echo "Change the StartFile Spec and Standard Include Dir" &&
 echo " so that GCC looks in ${TOOLS}" &&
@@ -466,6 +474,7 @@ cd ../build-gcc &&
 echo "GCC static configure" &&
 echo 'do we need?: CPPFLAGS_FOR_TARGET="--sysroot=${SYSROOT}"' &&
 echo 'do we need?: LDFLAGS_FOR_TARGET="--sysroot=${SYSROOT}"' &&
+echo 'do we need?: "---with-mpc=${CROSSTOOLS}"' &&
 AR=ar \
  LDFLAGS="-Wl,-rpath,${CROSSTOOLS}/lib" \
  ../gcc*/configure \
@@ -479,7 +488,6 @@ AR=ar \
   --with-gmp=${CROSSTOOLS} \
   --with-ppl=${CROSSTOOLS} \
   --with-cloog=${CROSSTOOLS} \
-  --with-mpc=${CROSSTOOLS} \
   --without-headers \
   --with-newlib \
   --disable-decimal-float \
@@ -526,6 +534,7 @@ cat > config.cache << "EOF"
 libc_cv_forced_unwind=yes
 libc_cv_c_cleanup=yes
 libc_cv_gnu89_inline=yes
+libc_cv_ssp=no
 EOF
 BUILD_CC="gcc" \
  CC="${CROSS_TARGET}-gcc ${BUILD64}" \
@@ -558,15 +567,15 @@ ls -l
 echo ""
 cat << END_OF_MSG
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
- GCC
+ Cross GCC final
       $GCC
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 END_OF_MSG
 tar xf ${SOURCES}/$GCC &&
 pushd gcc* &&
 echo "GCC patch" &&
-echo "applying gcc-4.5.1-pure64_specs-2.patch" &&
-patch -Np1 -i ${PATCHES}/gcc-4.5.1-pure64_specs-2.patch &&
+echo "applying gcc-4.5.2-pure64_specs-1.patch" &&
+patch -Np1 -i ${PATCHES}/gcc-4.5.2-pure64_specs-1.patch &&
 echo "" &&
 echo "Change the StartFile Spec and Standard Include Dir so that GCC looks" &&
 echo " in ${TOOLS}" &&
@@ -595,6 +604,7 @@ cd ../build-gcc &&
 echo "GCC configure" &&
 echo 'do we need?: CPPFLAGS_FOR_TARGET="--sysroot=${SYSROOT}"' &&
 echo 'do we need?: LDFLAGS_FOR_TARGET="--sysroot=${SYSROOT}"' &&
+echo 'do we need?: "---with-mpc=${CROSSTOOLS}"' &&
 AR=ar \
  LDFLAGS="-Wl,-rpath,${CROSSTOOLS}/lib" \
  ../gcc*/configure \
@@ -605,7 +615,6 @@ AR=ar \
   --with-sysroot=${SYSROOT} \
   --with-local-prefix=${TOOLS} \
   --with-mpfr=${CROSSTOOLS} \
-  --with-mpc=${CROSSTOOLS} \
   --with-gmp=${CROSSTOOLS} \
   --with-ppl=${CROSSTOOLS} \
   --with-cloog=${CROSSTOOLS} \
