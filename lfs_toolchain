@@ -22,19 +22,37 @@
 #   license: http://www.gnu.org/licenses/fdl.html
 #
 
-export CROSS_TARGET="x86_64-lfs-linux-gnu"
-export KERNEL_ARCH="ARCH=x86_64"
-export BUILD64="-m64"
+export TGT=i686
+#export TGT=x86_64
+
+if [ $TGT = "i686" ]
+then
+	export CROSS_TARGET="i686-lfs-linux-gnu"
+	export KERNEL_ARCH="ARCH=i386"
+elif [ $TGT = "x86_64" ]
+then
+	export CROSS_TARGET="x86_64-lfs-linux-gnu"
+	export KERNEL_ARCH="ARCH=x86_64"
+else
+	echo "unknown target: '$TGT'"
+	exit 1
+fi
+
+export CROSS_HOST="$(echo ${MACHTYPE} | \
+     sed "s/$(echo ${MACHTYPE} | \
+     cut -d- -f2)/cross/")"
+
 export SYSROOT="/lfs"
 export TOOLS="/tools"
 export TOOLCHAIN_BUILD="/lfs/build"
 export SOURCES=/lfs/sources/tarballs
 export PATCHES=/lfs/sources/patches
+
 export PATH=${TOOLS}/bin:${PATH}
 export LC_ALL=POSIX
 #export MAKEFLAGS='-j 10'
 
-LINUX="linux-2.6.37.tar.bz2"
+LINUX="linux-2.6.37.2.tar.bz2"
 GMP="gmp-5.0.1.tar.bz2"
 MPFR="mpfr-3.0.0.tar.xz"
 MPC="mpc-0.8.2.tar.gz"
@@ -53,20 +71,17 @@ GCC="gcc-4.5.2.tar.bz2"
 cat <<END_OF_MSG
 CROSS_TARGET=${CROSS_TARGET}
 KERNEL_ARCH=$KERNEL_ARCH
-BUILD64=$BUILD64
 CROSS_HOST=${CROSS_HOST}
 
 LINUX=$LINUX
-FILE=$FILE
-NCURSES=$NCURSES
-GMP=$GMP
-MPFR=$MPFR
-PPL=$PPL
-MPC=$MPC
-CLOOGPPL=$CLOOGPPL
 BINUTILS=$BINUTILS
 LIBC=$LIBC
 GCC=$GCC
+GMP=$GMP
+MPFR=$MPFR
+MPC=$MPC
+PPL=$PPL
+CLOOGPPL=$CLOOGPPL
 
 TOOLS=${TOOLS}
 TOOLCHAIN_BUILD=${TOOLCHAIN_BUILD}
@@ -86,7 +101,11 @@ END_OF_MSG
 echo "clearing ${TOOLS} and ${TOOLCHAIN_BUILD}"
 rm -rf ${TOOLS}/*
 rm -rf ${TOOLCHAIN_BUILD}/*
-mkdir -v ${TOOLS}/lib && ln -sv lib ${TOOLS}/lib64
+mkdir -v ${TOOLS}/lib
+if [ $TGT = "x86_64" ]
+then
+ln -sv lib ${TOOLS}/lib64
+fi
 mkdir -p ${TOOLCHAIN_BUILD}
 pushd ${TOOLCHAIN_BUILD}
 echo ""
@@ -163,7 +182,8 @@ echo <<END_OF_MSG
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 END_OF_MSG
 tar xf ${SOURCES}/$GCC &&
-pushd gcc* &&
+mv -v gcc* gcc &&
+pushd gcc &&
 tar xf ${SOURCES}/$MPFR &&
 mv -v mpfr-* mpfr &&
 tar xf ${SOURCES}/$GMP &&
@@ -172,7 +192,7 @@ tar xf ${SOURCES}/$MPC &&
 mv -v mpc-* mpc &&
 mkdir -v ../build-gcc &&
 cd ../build-gcc &&
-../gcc-4.5.2/configure \
+../gcc/configure \
     --target=$CROSS_TARGET \
     --prefix=${TOOLS} \
     --disable-nls \
@@ -255,14 +275,34 @@ echo "PATCH libc" &&
 patch -Np1 -i ${PATCHES}/glibc-2.13-gcc_fix-1.patch &&
 echo " building LIBC outside of the source directory" &&
 mkdir -v ../build-lib &&
-cd ../build-lib &&
+cd ../build-lib || exit $?
+
+if [ $TGT = "i686" ]
+then
+cat << END_OF_MSG
+    Because Glibc no longer supports i386, its developers say to use the
+    compiler flag -march=i486 when building it for x86 machines.
+
+    There are several ways to accomplish that, but testing shows that the
+    flag is best placed inside the build variable "CFLAGS".
+
+    Instead of overriding completely what Glibc's internal build system
+    uses for CFLAGS, append the new flag to the existing contents of
+    CFLAGS by making use of the special file configparms.
+
+    The -mtune=native flag is also necessary to reset a reasonable value
+    for -mtune that is changed when setting -march.
+END_OF_MSG
+echo "CFLAGS += -march=i486 -mtune=native" > configparms
+fi
+
  ../*libc*/configure \
     --prefix=${TOOLS} \
     --host=${CROSS_TARGET} \
-    --build=$(../*libc*/scripts/config.guess) \
+    --build=${CROSS_HOST} \
     --disable-profile \
     --enable-add-ons \
-    --enable-kernel=2.6.22.5 \
+    --enable-kernel=2.6.35 \
     --with-headers=${TOOLS}/include \
     libc_cv_forced_unwind=yes \
     libc_cv_c_cleanup=yes
@@ -272,7 +312,7 @@ echo "INSTALL libc" &&
 make install &&
 echo "YAY libc" || exit $?
 popd
-echo "CLEANUP Linux-Headers"
+echo "CLEANUP libc"
 pwd
 rm -rf ${TOOLCHAIN_BUILD}/*
 ls -l
@@ -303,6 +343,7 @@ $CROSS_TARGET-gcc -dumpspecs | sed \
   -e "/^\*cpp:$/{n;s,$, -isystem /tools/include,}" > $SPECS &&
 echo "New specs file is: $SPECS" &&
 unset SPECS &&
+echo "check compiling and linking" &&
 echo 'main(){}' > dummy.c &&
 ${CROSS_TARGET}-gcc -B${TOOLS}/lib dummy.c &&
 readelf -l a.out | grep ": ${TOOLS}" &&
@@ -312,7 +353,7 @@ echo "YAY Adjusting the Toolchain" || exit $?
 echo ""
 cat <<END_OF_MSG
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
- Binutils
+ ${TOOLS} Binutils
 
     $BINUTILS
         The Binutils package contains a linker, an assembler,
@@ -324,7 +365,7 @@ pushd binutils* &&
 mkdir -v ../build-binutils &&
 cd ../build-binutils &&
 echo "CONFIGURE cross binutils" &&
-CC="$CROSS_TARGET-gcc -B/tools/lib/" \
+CC="$CROSS_TARGET-gcc -B${TOOLS}/lib/" \
    AR=$CROSS_TARGET-ar \
    RANLIB=$CROSS_TARGET-ranlib \
    ../binutils*/configure \
@@ -382,7 +423,15 @@ echo <<END_OF_MSG
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 END_OF_MSG
 tar xf ${SOURCES}/$GCC &&
-pushd gcc* &&
+mv -v gcc* gcc &&
+pushd gcc &&
+tar xf ${SOURCES}/$MPFR &&
+mv -v mpfr-* mpfr &&
+tar xf ${SOURCES}/$GMP &&
+mv -v gmp-* gmp &&
+tar xf ${SOURCES}/$MPC &&
+mv -v mpc-* mpc &&
+
 echo "PATCH ${TOOLS} GCC" &&
 echo "Versions of GCC later than 4.3 will treat this build as if
     it were a relocated compiler and disallow searching for
@@ -458,24 +507,25 @@ echo "In case the above seems hard to follow, let's break it down
     inadvertently run twice." &&
 echo "" &&
 echo "" &&
-echo "unset the multilib spec for GCC to ensure that it will not" &&
-echo " attempt to link against libraries on the host." &&
-for file in $(find gcc/config -name t-linux64) ; do \
-    cp -v $file{,.orig}
-    sed '/MULTILIB_OSDIRNAMES/d' $file.orig > $file
-done
+if [ $TGT = "i686" ]
+then
+	echo "no need to unset multilibspec"
+elif [ $TGT = "x86_64" ]
+then
+	echo "unset the multilib spec for GCC to ensure that it will not" &&
+	echo " attempt to link against libraries on the host." &&
+	for file in $(find gcc/config -name t-linux64) ; do \
+		cp -v $file{,.orig}
+		sed '/MULTILIB_OSDIRNAMES/d' $file.orig > $file
+	done
+else
+	echo "unknown target '$TGT'"
+	exit 1
+fi
 echo "" &&
-tar xf ${SOURCES}/$GCC &&
-pushd gcc* &&
-tar xf ${SOURCES}/$MPFR &&
-mv -v mpfr-* mpfr &&
-tar xf ${SOURCES}/$GMP &&
-mv -v gmp-* gmp &&
-tar xf ${SOURCES}/$MPC &&
-mv -v mpc-* mpc &&
 mkdir -v ../build-gcc &&
 cd ../build-gcc &&
-CC="${CROSS_TARGET}-gcc -B/tools/lib/" \
+CC="${CROSS_TARGET}-gcc -B${TOOLS}/lib/" \
   AR=${CROSS_TARGET}-ar \
   RANLIB=${CROSS_TARGET}-ranlib \
   ../gcc*/configure \
@@ -498,7 +548,7 @@ echo "MAKE ${TOOLS} gcc" &&
 make &&
 echo "INSTALL ${TOOLS} gcc" &&
 make install &&
-ln -vs gcc /tools/bin/cc &&
+ln -vs gcc ${TOOLS}/bin/cc &&
 echo "ensure compiling and linking" &&
 echo 'main(){}' > dummy.c &&
 cc dummy.c &&
@@ -507,7 +557,7 @@ rm -v dummy.c a.out &&
 echo "YAY ${TOOLS} GCC" || exit $?
 echo "YAY libc" || exit $?
 popd
-echo "CLEANUP Linux-Headers"
+echo "CLEANUP GCC"
 pwd
 rm -rf ${TOOLCHAIN_BUILD}/*
 ls -l
