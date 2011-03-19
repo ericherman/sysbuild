@@ -26,7 +26,7 @@ export CROSS_HOST="$(echo ${MACHTYPE} | \
      sed "s/$(echo ${MACHTYPE} | \
      cut -d- -f2)/cross/")"
 
-LINUX="linux-2.6.37.tar.bz2"
+LINUX="linux-2.6.37.3.tar.bz2"
 FILE="file-5.05.tar.gz"
 NCURSES="ncurses-5.7.tar.gz"
 GMP="gmp-5.0.1.tar.bz2"
@@ -420,6 +420,7 @@ echo "check host environment for tools to compile Binutils" &&
 make configure-host &&
 echo "BINUTILS make" &&
 make &&
+make install &&
 echo "BINUTILS install" &&
 cp -v ../binutils*/include/libiberty.h ${TOOLS}/include &&
 echo "BINUTILS YAY" || exit $?
