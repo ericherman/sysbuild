@@ -1,0 +1,1185 @@
+#!/bin/bash
+#
+# Copyright (C) 2011 Eric Herman
+# license: http://www.gnu.org/licenses/lgpl-2.1.html
+#
+# initially thrown together by Eric Herman on 2011 March 09
+#
+# much of this is simply automating Cross-Compiled Linux From Scratch
+#  http://cross-lfs.org/
+#   Copyright (C) 2005-2010 Joe Ciccone, Jim Gifford & Ryan Oliver
+#   license: http://www.opencontent.org/openpub/
+#
+# CLFS is based upon Based on LFS, as well.
+#  http://www.linuxfromscratch.org/lfs/
+#   Copyright (C) 1999-2010 Gerard Beekmans
+#   license: Attribution-NonCommercial-ShareAlike 2.0
+#
+# some inspiration was from DIY Linux
+#  http://diy-linux.org/
+#   Copyright (C) 2004-2008, 2009 Greg Schafer
+#   license: http://www.gnu.org/licenses/fdl.html
+#
+
+export CROSS_TARGET="x86_64-unknown-linux-gnu"
+export KERNEL_ARCH="ARCH=x86_64"
+export BUILD64="-m64"
+export CROSS_HOST=$(echo ${MACHTYPE} | sed -e 's/-[^-]*/-cross/')
+
+export CROSSTOOLS="/cross-tools"
+export TOOLS="/tools"
+export SOURCES="/lfs/sources/tarballs"
+export PATCHES="/lfs/sources/patches"
+export BUILD="/lfs/build"
+
+set +h
+umask 022
+export LC_ALL=POSIX
+unset CFLAGS
+unset CXXFLAGS
+
+export PATH=${CROSSTOOLS}/bin:${PATH}
+
+#export MAKEFLAGS='-j 10'
+
+export CC="${CROSS_TARGET}-gcc"
+export CXX="${CROSS_TARGET}-g++"
+export AR="${CROSS_TARGET}-ar"
+export AS="${CROSS_TARGET}-as"
+export RANLIB="${CROSS_TARGET}-ranlib"
+export LD="${CROSS_TARGET}-ld"
+export STRIP="${CROSS_TARGET}-strip"
+
+echo "CFLAGS and CXXFLAGS must not be set during the building of tools"
+echo "CFLAGS=$CFLAGS";
+echo "CXXFLAGS=$CXXFLAGS"
+echo "PWD: `pwd`";
+
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                  TOOLS BUILD BEGINS
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+END_OF_MSG
+
+pushd ${BUILD}
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ GMP
+
+ is a library for arithmetic on arbitrary precision integers,
+ rational numbers, and floating-point numbers.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/bin/tclsh ];
+#then
+#echo "tcl complete; skipping"
+#else
+tar xf ${SOURCES}/gmp* &&
+pushd gmp* &&
+echo "CONFIGURE gmp" &&
+HOST_CC=gcc \
+  CPPFLAGS=-fexceptions \
+  CC="${CC} ${BUILD64}" \
+  CXX="${CXX} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --enable-cxx &&
+echo "MAKE tools gmp" &&
+make &&
+echo "INSTALL tools gmp" &&
+make install &&
+echo "YAY tools gmp" || exit $?
+popd
+echo "CLEANUP tools gmp"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ MPFR
+
+ C library for multiple-precision floating-point computations
+ with correct rounding.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/bin/tclsh ];
+#then
+#echo "tcl complete; skipping"
+#else
+tar xf ${SOURCES}/mpfr* &&
+pushd mpfr* &&
+echo "CONFIGURE mpfr" &&
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --enable-shared
+echo "MAKE tools mpfr" &&
+make &&
+echo "INSTALL tools mpfr" &&
+make install &&
+echo "YAY tools mpfr" || exit $?
+popd
+echo "CLEANUP tools mpfr"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ MPC
+
+ library for the arithmetic of complex numbers with arbitrarily
+ high precision and correct rounding of the result
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "mpc complete; skipping"
+#else
+tar xf ${SOURCES}/mpc* &&
+pushd mpc* &&
+echo "CONFIGURE mpc" &&
+CC="${CC} ${BUILD64}" \
+  EGREP="grep -E" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} &&
+echo "MAKE tools mpc" &&
+make &&
+echo "INSTALL tools mpc" &&
+make install &&
+echo "YAY tools mpc" || exit $?
+popd
+echo "CLEANUP tools mpc"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ PPL
+
+ The Parma Polyhedra Library (PPL) provides numerical
+ abstractions especially targeted at applications in the field
+ of analysis and verification of complex systems.
+
+ CLooG-PPL requires this library.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "ppl complete; skipping"
+#else
+tar xf ${SOURCES}/ppl* &&
+pushd ppl* &&
+echo "CONFIGURE tools ppl" &&
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --enable-interfaces="c,cxx" \
+    --enable-shared \
+    --disable-optimization \
+    --with-libgmp-prefix=${TOOLS} \
+    --with-libgmpxx-prefix=${TOOLS} &&
+echo "config complete" || exit $?
+cat <<END_OF_MSG
+When PPL is cross-compiled, it does not check whether GMP
+was compiled with support for exceptions, and simply assumes
+it was not. This assumption is incorrect, so we will fix that
+END_OF_MSG
+echo '#define PPL_GMP_SUPPORTS_EXCEPTIONS 1' >> confdefs.h &&
+echo "MAKE tools ppl" &&
+make &&
+echo "INSTALL tools ppl" &&
+make install &&
+echo "YAY tools ppl" || exit $?
+popd
+echo "CLEANUP tools ppl"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ CLoog-PPL
+
+ CLooG-PPL a library to generate code for scanning Z-polyhedra.
+ In other words, it finds code that reaches each integral point
+ of one or more parameterized polyhedra.
+
+ GCC links with this library in order to enable the new loop
+ generation code known as Graphite.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "cloog complete; skipping"
+#else
+tar xf ${SOURCES}/cloog* &&
+pushd cloog* &&
+echo "CONFIGURE tools cloog" &&
+echo "The following prevents the configure script from setting LD_LIBRARY_PATH when it finds PPL." &&
+echo " This will prevent any conflicts with libraries from the host system" &&
+cp -v configure{,.orig} &&
+sed -e "/LD_LIBRARY_PATH=/d" \
+    configure.orig > configure &&
+echo "will now diff configure" || exit $?
+diff configure.orig configure
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --with-bits=gmp \
+    --enable-shared \
+    --with-gmp=${TOOLS} \
+    --with-ppl=${TOOLS} &&
+echo "MAKE tools cloog" &&
+make &&
+echo "INSTALL tools cloog" &&
+make install &&
+echo "YAY tools cloog" || exit $?
+popd
+echo "CLEANUP tools cloog"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ Zlib
+
+ old compression lib
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "zlib complete; skipping"
+#else
+tar xf ${SOURCES}/zlib* &&
+pushd zlib* &&
+echo "CONFIGURE tools zlib" &&
+CC="${CC} ${BUILD64}" \
+   ./configure --prefix=${TOOLS}
+echo "MAKE tools zlib" &&
+make &&
+echo "INSTALL tools zlib" &&
+make install &&
+echo "YAY tools zlib" || exit $?
+popd
+echo "CLEANUP tools zlib"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ Binutils
+
+ assembler, linker, etc.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "binutils complete; skipping"
+#else
+tar xf ${SOURCES}/binutils* &&
+pushd binutils* &&
+mkdir -v ../build-binutils &&
+cd ../build-binutils &&
+echo "CONFIGURE tools binutils" &&
+CC="${CC} ${BUILD64}" \
+  ../binutils*/configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --target=${CROSS_TARGET} \
+    --with-lib-path=${TOOLS}/lib \
+    --disable-nls \
+    --enable-shared \
+    --enable-64-bit-bfd \
+    --disable-multilib &&
+echo "MAKE tools binutils" &&
+make configure-host &&
+make &&
+echo "INSTALL tools binutils" &&
+make install &&
+echo "YAY tools binutils" || exit $?
+popd
+echo "CLEANUP tools binutils"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ gcc
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "gcc complete; skipping"
+#else
+tar xf ${SOURCES}/gcc* &&
+pushd gcc* &&
+echo "PATCH tools gcc" &&
+patch -Np1 -i ${PATCHES}/gcc-*-pure64_specs*.patch &&
+echo "Change the StartFile Spec and Standard Include Dir so that GCC looks in ${TOOLS}" &&
+echo -en '#undef STANDARD_INCLUDE_DIR\n#define STANDARD_INCLUDE_DIR "${TOOLS}/include/"\n\n' >> gcc/config/linux.h &&
+echo -en '\n#undef STANDARD_STARTFILE_PREFIX_1\n#define STANDARD_STARTFILE_PREFIX_1 "${TOOLS}/lib/"\n' >> gcc/config/linux.h &&
+echo -en '\n#undef STANDARD_STARTFILE_PREFIX_2\n#define STANDARD_STARTFILE_PREFIX_2 ""\n' >> gcc/config/linux.h &&
+echo "Also, we need to set the directory searched by the fixincludes" &&
+echo "  process for system headers, so it won't look at the host's" &&
+echo "   headers" &&
+cp -v gcc/Makefile.in{,.orig} &&
+sed -e 's@\(^NATIVE_SYSTEM_HEADER_DIR =\).*@\1 ${TOOLS}/include@g' \
+    gcc/Makefile.in.orig > gcc/Makefile.in &&
+mkdir -v ../build-gcc &&
+cd ../build-gcc &&
+echo "CONFIGURE tools gcc" &&
+CC="${CC} ${BUILD64}" \
+  CXX="${CXX} ${BUILD64}" \
+  ../gcc*/configure \
+    --prefix=${TOOLS} \
+    --disable-multilib \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --target=${CROSS_TARGET} \
+    --libexecdir=${TOOLS}/lib \
+    --with-local-prefix=${TOOLS} \
+    --enable-long-long \
+    --enable-c99 \
+    --enable-shared \
+    --enable-threads=posix \
+    --disable-nls \
+    --enable-__cxa_atexit \
+    --enable-languages=c,c++ \
+    --disable-libstdcxx-pch &&
+cp -v Makefile{,.orig} &&
+sed "/^HOST_\(GMP\|PPL\|CLOOG\)\(LIBS\|INC\)/s:-[IL]/\(lib\|include\)::" \
+    Makefile.orig > Makefile &&
+echo "diff makefile" || exit $?
+diff Makefile.orig Makefile
+echo "MAKE tools gcc" &&
+make AS_FOR_TARGET="${AS}" \
+    LD_FOR_TARGET="${LD}" &&
+echo "INSTALL tools gcc" &&
+make install &&
+echo "YAY tools gcc" || exit $?
+popd
+echo "CLEANUP tools gcc"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ Ncurses
+
+ libraries for terminal-independent handling of character screens
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "ncurses complete; skipping"
+#else
+tar xf ${SOURCES}/ncurses* &&
+pushd ncurses* &&
+echo "PATCH tools ncurses" &&
+patch -Np1 -i ${PATCHES}/ncurses*bash_fix*.patch &&
+echo "CONFIGURE tools ncurses" &&
+CC="${CC} ${BUILD64}" \
+  CXX="${CXX} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --with-shared \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --without-debug \
+    --without-ada \
+    --enable-overwrite \
+    --with-build-cc=gcc &&
+echo "MAKE tools ncurses" &&
+make &&
+echo "INSTALL tools ncurses" &&
+make install &&
+echo "YAY tools ncurses" || exit $?
+popd
+echo "CLEANUP tools ncurses"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ Bash
+
+ Bourne Again Shell
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "bash complete; skipping"
+#else
+tar xf ${SOURCES}/bash* &&
+pushd bash* &&
+echo "PATCH tools bash" &&
+patch -Np1 -i ${PATCHES}/bash-*-branch_update-*.patch
+cat > config.cache << "EOF"
+ac_cv_func_mmap_fixed_mapped=yes
+ac_cv_func_strcoll_works=yes
+ac_cv_func_working_mktime=yes
+bash_cv_func_sigsetjmp=present
+bash_cv_getcwd_malloc=yes
+bash_cv_job_control_missing=present
+bash_cv_printf_a_format=yes
+bash_cv_sys_named_pipes=present
+bash_cv_ulimit_maxfds=yes
+bash_cv_under_sys_siglist=yes
+bash_cv_unusable_rtsigs=no
+gt_cv_int_divbyzero_sigfpe=yes
+EOF
+echo "CONFIGURE tools bash" &&
+CC="${CC} ${BUILD64}" \
+  CXX="${CXX} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --without-bash-malloc \
+    --cache-file=config.cache &&
+echo "MAKE tools bash" &&
+make &&
+echo "INSTALL tools bash" &&
+make install &&
+ln -sv bash ${TOOLS}/bin/sh &&
+echo "YAY tools bash" || exit $?
+popd
+echo "CLEANUP tools bash"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ Bison
+
+ parser generator
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "bison complete; skipping"
+#else
+tar xf ${SOURCES}/bison* &&
+pushd bison* &&
+echo "CONFIGURE tools bison" &&
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} &&
+echo "MAKE tools bison" &&
+make &&
+echo "INSTALL tools bison" &&
+make install &&
+echo "YAY tools bison" || exit $?
+popd
+echo "CLEANUP tools bison"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ Bzip2
+
+ bz2 compression
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "bzip complete; skipping"
+#else
+tar xf ${SOURCES}/bzip* &&
+pushd bzip* &&
+echo "CONFIGURE tools bzip" &&
+cp -v Makefile{,.orig} &&
+sed -e 's@^\(all:.*\) test@\1@g' Makefile.orig > Makefile &&
+echo "diff the Makefile" || exit $?
+diff Makefile.orig  Makefile
+echo "MAKE tools bzip" &&
+make CC="${CC} ${BUILD64}" AR="${AR}" RANLIB="${RANLIB}" &&
+echo "INSTALL tools bzip" &&
+make PREFIX=${TOOLS} install &&
+echo "YAY tools bzip" || exit $?
+popd
+echo "CLEANUP tools bzip"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ coreutils
+
+ ls and friends
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "coreutils complete; skipping"
+#else
+tar xf ${SOURCES}/coreutils* &&
+pushd coreutils* &&
+echo "CONFIGURE tools coreutils" &&
+touch man/uname.1 man/hostname.1 &&
+cat > config.cache << EOF
+fu_cv_sys_stat_statfs2_bsize=yes
+gl_cv_func_working_mkstemp=yes
+EOF
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --enable-install-program=hostname \
+    --cache-file=config.cache &&
+echo "MAKE tools coreutils" &&
+make &&
+echo "INSTALL tools coreutils" &&
+make install &&
+echo "YAY tools coreutils" || exit $?
+popd
+echo "CLEANUP tools coreutils"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ diffutils
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "diffutils complete; skipping"
+#else
+tar xf ${SOURCES}/diffutils* &&
+pushd diffutils* &&
+echo "CONFIGURE tools diffutils" &&
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} &&
+echo "MAKE tools diffutils" &&
+make &&
+echo "INSTALL tools diffutils" &&
+make install &&
+echo "YAY tools diffutils" || exit $?
+popd
+echo "CLEANUP tools diffutils"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ findutils
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "findutils complete; skipping"
+#else
+tar xf ${SOURCES}/findutils* &&
+pushd findutils* &&
+echo "CONFIGURE tools findutils" &&
+echo "gl_cv_func_wcwidth_works=yes" > config.cache &&
+echo "ac_cv_func_fnmatch_gnu=yes" >> config.cache &&
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --cache-file=config.cache &&
+echo "MAKE tools findutils" &&
+make &&
+echo "INSTALL tools findutils" &&
+make install &&
+echo "YAY tools findutils" || exit $?
+popd
+echo "CLEANUP tools findutils"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ file
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "file complete; skipping"
+#else
+tar xf ${SOURCES}/file* &&
+pushd file* &&
+echo "CONFIGURE tools file" &&
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} &&
+echo "MAKE tools file" &&
+make &&
+echo "INSTALL tools file" &&
+make install &&
+echo "YAY tools file" || exit $?
+popd
+echo "CLEANUP tools file"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ flex
+
+ fast lex
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "flex complete; skipping"
+#else
+tar xf ${SOURCES}/flex* &&
+pushd flex* &&
+echo "PATCH tools flex" &&
+patch -Np1 -i ${PATCHES}/flex-*-gcc*-*.patch &&
+cat > config.cache << EOF
+ac_cv_func_malloc_0_nonnull=yes
+ac_cv_func_realloc_0_nonnull=yes
+EOF
+echo "CONFIGURE tools flex" &&
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --cache-file=config.cache &&
+echo "MAKE tools flex" &&
+make &&
+echo "INSTALL tools flex" &&
+make install &&
+echo "YAY tools flex" || exit $?
+popd
+echo "CLEANUP tools flex"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ gawk
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "gawk complete; skipping"
+#else
+tar xf ${SOURCES}/gawk* &&
+pushd gawk* &&
+echo "CONFIGURE tools gawk" &&
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} &&
+echo "MAKE tools gawk" &&
+make &&
+echo "INSTALL tools gawk" &&
+make install &&
+echo "YAY tools gawk" || exit $?
+popd
+echo "CLEANUP tools gawk"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ gettext
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "gettext complete; skipping"
+#else
+tar xf ${SOURCES}/gettext* &&
+pushd gettext* &&
+cd gettext-tools &&
+echo "CONFIGURE tools gettext" &&
+echo "gl_cv_func_wcwidth_works=yes" > config.cache &&
+CC="${CC} ${BUILD64}" \
+  CXX="${CXX} ${BUILD64}" \
+    ./configure \
+      --prefix=${TOOLS} \
+      --disable-shared \
+      --build=${CROSS_HOST} \
+      --host=${CROSS_TARGET} \
+      --cache-file=config.cache &&
+echo "MAKE tools gettext" &&
+make -C gnulib-lib &&
+make -C src msgfmt &&
+echo "INSTALL tools gettext" &&
+cp -v src/msgfmt ${TOOLS}/bin &&
+echo "YAY tools gettext" || exit $?
+popd
+echo "CLEANUP tools gettext"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ grep
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "grep complete; skipping"
+#else
+tar xf ${SOURCES}/grep* &&
+pushd grep* &&
+echo "CONFIGURE tools grep" &&
+cat > config.cache << EOF
+ac_cv_func_malloc_0_nonnull=yes
+ac_cv_func_realloc_0_nonnull=yes
+EOF
+CC="${CC} ${BUILD64}" \
+  ./configure --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --disable-perl-regexp \
+    --without-included-regex \
+    --cache-file=config.cache &&
+echo "MAKE tools grep" &&
+make &&
+echo "INSTALL tools grep" &&
+make install &&
+echo "YAY tools grep" || exit $?
+popd
+echo "CLEANUP tools grep"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ gzip
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "gzip complete; skipping"
+#else
+tar xf ${SOURCES}/gzip* &&
+pushd gzip* &&
+echo "CONFIGURE tools gzip" &&
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} &&
+echo "MAKE tools gzip" &&
+make &&
+echo "INSTALL tools gzip" &&
+make install &&
+echo "YAY tools gzip" || exit $?
+popd
+echo "CLEANUP tools gzip"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ m4
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "m4 complete; skipping"
+#else
+tar xf ${SOURCES}/m4* &&
+pushd m4* &&
+echo "CONFIGURE tools m4" &&
+cat > config.cache << EOF
+gl_cv_func_btowc_eof=yes
+gl_cv_func_mbrtowc_incomplete_state=yes
+gl_cv_func_mbrtowc_sanitycheck=yes
+gl_cv_func_mbrtowc_null_arg=yes
+gl_cv_func_mbrtowc_retval=yes
+gl_cv_func_mbrtowc_nul_retval=yes
+gl_cv_func_wcrtomb_retval=yes
+gl_cv_func_wctob_works=yes
+EOF
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --cache-file=config.cache &&
+echo "MAKE tools m4" &&
+make &&
+echo "INSTALL tools m4" &&
+make install &&
+echo "YAY tools m4" || exit $?
+popd
+echo "CLEANUP tools m4"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ make
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "make complete; skipping"
+#else
+tar xf ${SOURCES}/make* &&
+pushd make* &&
+echo "CONFIGURE tools make" &&
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} &&
+echo "MAKE tools make" &&
+make &&
+echo "INSTALL tools make" &&
+make install &&
+echo "YAY tools make" || exit $?
+popd
+echo "CLEANUP tools make"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ patch
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "patch complete; skipping"
+#else
+tar xf ${SOURCES}/patch* &&
+pushd patch* &&
+echo "CONFIGURE tools patch" &&
+echo "ac_cv_func_strnlen_working=yes" > config.cache &&
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --cache-file=config.cache &&
+echo "MAKE tools patch" &&
+make &&
+echo "INSTALL tools patch" &&
+make install &&
+echo "YAY tools patch" || exit $?
+popd
+echo "CLEANUP tools patch"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ sed
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "sed complete; skipping"
+#else
+tar xf ${SOURCES}/sed* &&
+pushd sed* &&
+echo "CONFIGURE tools sed" &&
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} &&
+echo "MAKE tools sed" &&
+make &&
+echo "INSTALL tools sed" &&
+make install &&
+echo "YAY tools sed" || exit $?
+popd
+echo "CLEANUP tools sed"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ tar
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "tar complete; skipping"
+#else
+tar xf ${SOURCES}/tar* &&
+pushd tar* &&
+echo "CONFIGURE tools tar" &&
+cat > config.cache << EOF
+gl_cv_func_wcwidth_works=yes
+gl_cv_func_btowc_eof=yes
+ac_cv_func_malloc_0_nonnull=yes
+ac_cv_func_realloc_0_nonnull=yes
+gl_cv_func_mbrtowc_incomplete_state=yes
+gl_cv_func_mbrtowc_nul_retval=yes
+gl_cv_func_mbrtowc_null_arg=yes
+gl_cv_func_mbrtowc_retval=yes
+gl_cv_func_wcrtomb_retval=yes
+EOF
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --cache-file=config.cache &&
+echo "MAKE tools tar" &&
+make &&
+echo "INSTALL tools tar" &&
+make install &&
+echo "YAY tools tar" || exit $?
+popd
+echo "CLEANUP tools tar"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ texinfo
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "texinfo complete; skipping"
+#else
+tar xf ${SOURCES}/texinfo* &&
+pushd texinfo* &&
+echo "CONFIGURE tools texinfo" &&
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} &&
+echo "MAKE tools texinfo (-C tools/gnulib/lib)" &&
+make -C tools/gnulib/lib &&
+echo "MAKE tools texinfo (-C tools)" &&
+make -C tools &&
+echo "MAKE tools texinfo" &&
+make &&
+echo "INSTALL tools texinfo" &&
+make install &&
+echo "YAY tools texinfo" || exit $?
+popd
+echo "CLEANUP tools texinfo"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ vim
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "vim complete; skipping"
+#else
+tar xf ${SOURCES}/vim* &&
+pushd vim* &&
+echo "PATCH tools vim" &&
+patch -Np1 -i ${PATCHES}/vim-*-branch_update-*.patch &&
+echo "The configure script has a single hard coded test that cannot be bypassed with a cache entry." &&
+sed -i "/using uint32_t/s/as_fn_error/#&/" src/auto/configure &&
+echo "CONFIGURE tools vim" &&
+cat > src/auto/config.cache << "EOF"
+vim_cv_getcwd_broken=no
+vim_cv_memmove_handles_overlap=yes
+vim_cv_stat_ignores_slash=no
+vim_cv_terminfo=yes
+vim_cv_tgent=zero
+vim_cv_toupper_broken=no
+vim_cv_tty_group=world
+ac_cv_sizeof_int=4
+ac_cv_sizeof_long=4
+ac_cv_sizeof_time_t=4
+ac_cv_sizeof_off_t=4
+EOF
+echo "Change the default location of the vimrc configuration file to ${TOOLS}/etc" &&
+echo "#define SYS_VIMRC_FILE \"${TOOLS}/etc/vimrc\"" >> src/feature.h &&
+CC="${CC} ${BUILD64}"
+  CXX="${CXX} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --enable-multibyte \
+    --enable-gui=no \
+    --disable-gtktest \
+    --disable-xim \
+    --with-features=normal \
+    --disable-gpm \
+    --without-x \
+    --disable-netbeans \
+    --with-tlib=ncurses &&
+echo "MAKE tools vim" &&
+make &&
+echo "INSTALL tools vim" &&
+make install &&
+ln -sv vim /tools/bin/vi &&
+echo "YAY tools vim" || exit $?
+cat > /tools/etc/vimrc << "EOF"
+" Begin /etc/vimrc
+
+set nocompatible
+set backspace=2
+set ruler
+syntax on
+
+" End /etc/vimrc
+EOF
+popd
+echo "CLEANUP tools vim"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ xz
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/something ];
+#then
+#echo "xz complete; skipping"
+#else
+tar xf ${SOURCES}/xz* &&
+pushd xz* &&
+echo "CONFIGURE tools xz" &&
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=${TOOLS} \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} &&
+echo "MAKE tools xz" &&
+make &&
+echo "INSTALL tools xz" &&
+make install &&
+echo "YAY tools xz" || exit $?
+popd
+echo "CLEANUP tools xz"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+popd
+echo "WOOT"
+

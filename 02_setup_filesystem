@@ -1,0 +1,93 @@
+#!/bin/bash
+#
+# Copyright (C) 2011 Eric Herman
+# license: http://www.gnu.org/licenses/lgpl-2.1.html
+#
+# initially thrown together by Eric Herman on 2011 May 01
+#
+# much of this is simply automating Cross-Compiled Linux From Scratch
+#  http://cross-lfs.org/
+#   Copyright (C) 2005-2010 Joe Ciccone, Jim Gifford & Ryan Oliver
+#   license: http://www.opencontent.org/openpub/
+#
+# CLFS is based upon Based on LFS, as well.
+#  http://www.linuxfromscratch.org/lfs/
+#   Copyright (C) 1999-2010 Gerard Beekmans
+#   license: Attribution-NonCommercial-ShareAlike 2.0
+#
+# some inspiration was from DIY Linux
+#  http://diy-linux.org/
+#   Copyright (C) 2004-2008, 2009 Greg Schafer
+#   license: http://www.gnu.org/licenses/fdl.html
+#
+
+export SYSROOT="/lfs"
+export CROSSTOOLS="/cross-tools"
+export BUILD="/lfs/build"
+
+set +h
+umask 022
+export LC_ALL=POSIX
+unset CFLAGS
+unset CXXFLAGS
+
+export PATH=${CROSSTOOLS}/bin:${PATH}
+
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                  TOOLS BUILD BEGINS
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+END_OF_MSG
+
+pushd ${BUILD}
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+  Creating Directories
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+mkdir -pv ${SYSROOT}/{bin,boot,dev,{etc/,}opt,home,lib,mnt} &&
+mkdir -pv ${SYSROOT}/{proc,media/{floppy,cdrom},sbin,srv,sys} &&
+mkdir -pv ${SYSROOT}/var/{lock,log,mail,run,spool} &&
+mkdir -pv ${SYSROOT}/var/{opt,cache,lib/{misc,locate},local} &&
+install -dv -m 0750 ${SYSROOT}/root &&
+install -dv -m 1777 ${SYSROOT}{/var,}/tmp &&
+mkdir -pv ${SYSROOT}/usr/{,local/}{bin,include,lib,sbin,src} &&
+mkdir -pv ${SYSROOT}/usr/{,local/}share/{doc,info,locale,man} &&
+mkdir -pv ${SYSROOT}/usr/{,local/}share/{misc,terminfo,zoneinfo} &&
+mkdir -pv ${SYSROOT}/usr/{,local/}share/man/man{1,2,3,4,5,6,7,8} &&
+echo "creating docs dirs" || exit $?
+for dir in ${SYSROOT}/usr{,/local}; do
+  ln -sv share/{man,doc,info} $dir
+done
+echo "creating games dirs" || exit $?
+mkdir -pv ${SYSROOT}/usr/local/games
+mkdir -pv ${SYSROOT}/usr/share/games
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ Creating Essential Symlinks
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+
+ln -sv /tools/bin/{bash,cat,echo,grep,pwd,sleep,stty} ${SYSROOT}/bin &&
+ln -sv /tools/bin/file ${SYSROOT}/usr/bin &&
+ln -sv /tools/lib/libgcc_s.so{,.1} ${SYSROOT}/usr/lib &&
+ln -sv /tools/lib/libstd*so* ${SYSROOT}/usr/lib &&
+ln -sv bash ${SYSROOT}/bin/sh &&
+echo "YAY" || exit $?
+
+cat << END_OF_MSG
+To enable some c++ tests in the Glibc and Binutils testsuites to link,
+create a directory and make some symbolic links:
+END_OF_MSG
+mkdir -pv ${SYSROOT}/usr/lib64 &&
+ln -sv /tools/lib/libstd*so* ${SYSROOT}/usr/lib64 &&
+echo "YAY" || exit $?
+
+popd
+echo "WOOT"
+
