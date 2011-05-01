@@ -1,13 +1,20 @@
 #!/bin/bash
 #
-# thrown together by Eric Herman on 2010 December 19
+# Copyright (C) 2010-2011 Eric Herman
+# license: http://www.gnu.org/licenses/lgpl-2.1.html
+#
+# initially thrown together by Eric Herman on 2010 December 19
 #
 # much of this is based upon Cross-Compiled Linux From Scratch
 #  http://cross-lfs.org/
 #   Copyright (C) 2005-2010 Joe Ciccone, Jim Gifford & Ryan Oliver
-# which is based upon Based on LFS,
+#   license: http://www.opencontent.org/openpub/
+#
+# CLFS is/was based upon LFS,
 #  http://www.linuxfromscratch.org/lfs/
 #   Copyright (C) 1999-2010 Gerard Beekmans
+#   license: http://creativecommons.org/licenses/by-nc-sa/2.0/
+#
 # some inspiration was from DIY Linux
 #  http://diy-linux.org/
 #   Copyright (C) 2004-2008, 2009 Greg Schafer
