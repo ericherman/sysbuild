@@ -22,43 +22,36 @@ To account for the possibility that the host and target are the same
   arch, as cross-compiling won't work when host and target are the same,
   part of the host triplet was changed slightly to add 'cross'
 END_OF_DOCS
-export CROSS_HOST="$(echo ${MACHTYPE} | \
-     sed "s/$(echo ${MACHTYPE} | \
-     cut -d- -f2)/cross/")"
+export CROSS_HOST=$(echo ${MACHTYPE} | sed -e 's/-[^-]*/-cross/')
 
-LINUX="linux-2.6.37.3.tar.bz2"
-FILE="file-5.05.tar.gz"
-NCURSES="ncurses-5.7.tar.gz"
+LINUX="linux-2.6.38.4.tar.bz2"
+FILE="file-5.06.tar.gz"
+NCURSES="ncurses-5.9.tar.gz"
 GMP="gmp-5.0.1.tar.bz2"
-MPFR="mpfr-3.0.0.tar.xz"
-MPC="mpc-0.8.2.tar.gz"
-#PPL="ppl-0.11.tar.bz2"
-PPL="ppl-0.10.2.tar.bz2"
-CLOOGPPL="cloog-ppl-0.15.10.tar.gz"
-#BINUTILS="binutils-2.21.tar.bz2"
-BINUTILS="binutils-2.20.1.tar.bz2"
-#LIBC="glibc-2.12.2.tar.xz"
-LIBC="eglibc-2.12-r12509.tar.bz2"
-GCC="gcc-4.5.2.tar.bz2"
+MPFR="mpfr-3.0.1.tar.bz2"
+MPC="mpc-0.9.tar.gz"
+PPL="ppl-0.11.2.tar.bz2"
+CLOOGPPL="cloog-ppl-0.15.11.tar.gz"
+BINUTILS="binutils-2.21.tar.bz2"
+LIBC="glibc-2.13.tar.xz"
+#LIBC="eglibc-2.13-r13356.tar.bz2"
+#LIBC="eglibc-2.12-r12509.tar.bz2"
+GCC="gcc-4.6.0.tar.bz2"
 
-<<END_OF_DOCS
-SOME helpful links:
- http://gcc.gnu.org/install/prerequisites.html
-
- http://www.cs.unipr.it/ppl/Download/ftp/releases/0.11/ppl-0.11.tar.bz2
- ftp://gcc.gnu.org/pub/gcc/infrastructure/cloog-ppl-0.15.10.tar.gz
- http://www.multiprecision.org/mpc/download/mpc-0.8.2.tar.gz
-END_OF_DOCS
 
 export SYSROOT="/lfs"
 export CROSSTOOLS="/cross-tools"
 export TOOLS="/tools"
 #export TOOLCHAIN_BUILD=/tmp/${USER}/build_toolchain
 export TOOLCHAIN_BUILD="/lfs/build"
-export SOURCES=/lfs/sources
-export PATCHES=/lfs/patches
+export SOURCES=/lfs/sources/tarballs
+export PATCHES=/lfs/sources/patches
 export PATH=${CROSSTOOLS}/bin:${PATH}
 export LC_ALL=POSIX
+unset CFLAGS
+unset CXXFLAGS
+set +h
+umask 022
 
 # TODO is "PREFIX" a better name than "CROSSTOOLS"?
 
@@ -96,6 +89,15 @@ PATH=${PATH}
 LC_ALL=${LC_ALL}
 END_OF_MSG
 
+<<END_OF_DOCS
+SOME helpful links:
+ http://gcc.gnu.org/install/prerequisites.html
+
+ http://www.cs.unipr.it/ppl/Download/ftp/releases/0.11/ppl-0.11.tar.bz2
+ ftp://gcc.gnu.org/pub/gcc/infrastructure/cloog-ppl-0.15.10.tar.gz
+ http://www.multiprecision.org/mpc/download/mpc-0.8.2.tar.gz
+END_OF_DOCS
+
 echo ""
 cat <<END_OF_MSG
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -112,11 +114,8 @@ mkdir -p ${TOOLCHAIN_BUILD}
 pushd ${TOOLCHAIN_BUILD}
 echo ""
 echo "CFLAGS and CXXFLAGS must not be set during the building of cross-tools"
-unset CFLAGS
-unset CXXFLAGS
 echo "CFLAGS=$CFLAGS";
 echo "CXXFLAGS=$CXXFLAGS"
-
 echo ""
 cat <<END_OF_MSG
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -181,9 +180,9 @@ END_OF_MSG
 tar xf ${SOURCES}/$NCURSES &&
 pushd ncurses* &&
 echo "NCURSES (tic) patch"
-echo "applying ncurses-5.7-bash_fix-1.patch" &&
+echo "applying ncurses-5.9-bash_fix-1.patch" &&
 echo " (which fixes an issue with some Bash versions)" &&
-patch -Np1 -i ${PATCHES}/ncurses-5.7-bash_fix-1.patch &&
+patch -Np1 -i ${PATCHES}/ncurses-5.9-bash_fix-1.patch &&
 echo "NCURSES (tic) configure" &&
 ./configure \
   --prefix=${CROSSTOOLS} \
@@ -244,11 +243,11 @@ cat <<END_OF_MSG
 END_OF_MSG
 tar xf ${SOURCES}/$MPFR &&
 pushd mpfr* &&
-echo "MPFR patch" &&
-echo " now applying mpfr-3.0.0-branch_update-1.patch" &&
-echo "  http://www.mpfr.org/mpfr-current/allpatches" &&
-echo "   grabbed on 2010-12-19" &&
-patch -N -Z -p1 -i ${PATCHES}/mpfr-3.0.0-branch_update-1.patch &&
+#echo "MPFR patch" &&
+#echo " now applying mpfr-3.0.0-branch_update-1.patch" &&
+#echo "  http://www.mpfr.org/mpfr-current/allpatches" &&
+#echo "   grabbed on 2010-12-19" &&
+#patch -N -Z -p1 -i ${PATCHES}/mpfr-3.0.0-branch_update-1.patch &&
 echo "MPFR configure" &&
 LDFLAGS="-Wl,-rpath,${CROSSTOOLS}/lib" \
  ./configure \
@@ -286,8 +285,8 @@ echo "MPC configure" &&
 LDFLAGS="-Wl,-rpath,${CROSSTOOLS}/lib" \
  ./configure \
     --prefix=${CROSSTOOLS} \
-    --with-mpfr=${CROSSTOOLS} \
-    --with-gmp=${CROSSTOOLS} &&
+    --with-gmp=${CROSSTOOLS} \
+    --with-mpfr=${CROSSTOOLS} &&
 echo "MPC make" &&
 make &&
 echo "MPC install" &&
@@ -353,16 +352,16 @@ cat <<END_OF_MSG
 END_OF_MSG
 tar xf ${SOURCES}/$CLOOGPPL &&
 pushd cloog* &&
-echo "CLOOGPPL patch" &&
-echo " When CLooG-PPL 0.15.10 was packaged it was missing a few files" &&
-echo " related to Libtool. The following patch adds them back in and" &&
-echo " regenerted Automake and Autoconf." &&
-patch -Np1 -i ${PATCHES}/cloog-ppl-0.15.10-autogen-1.patch &&
+#echo "CLOOGPPL patch" &&
+#echo " When CLooG-PPL 0.15.10 was packaged it was missing a few files" &&
+#echo " related to Libtool. The following patch adds them back in and" &&
+#echo " regenerted Automake and Autoconf." &&
+#patch -Np1 -i ${PATCHES}/cloog-ppl-0.15.10-autogen-1.patch &&
 echo " prevent the configure script from setting LD_LIBRARY_PATH when it" &&
 echo " finds PPL, preventing any conflicts with libraries from the host" &&
 echo " system" &&
 cp -v configure{,.orig} &&
-sed "/LD_LIBRARY_PATH=/d" configure.orig > configure &&
+sed -e "/LD_LIBRARY_PATH=/d" configure.orig > configure &&
 echo "CLOOGPPL configure diff" || exit $?
 diff -u configure.orig configure
 echo "CLOOGPPL configure" &&
@@ -441,17 +440,19 @@ END_OF_MSG
 tar xf ${SOURCES}/$GCC &&
 pushd gcc* &&
 echo "GCC static patch" &&
-echo "applying gcc-4.5.2-pure64_specs-1.patch" &&
-patch -Np1 -i ${PATCHES}/gcc-4.5.2-pure64_specs-1.patch &&
+echo "applying gcc-4.6.0-pure64_specs-1.patch" &&
+patch -Np1 -i ${PATCHES}/gcc-4.6.0-pure64_specs-1.patch &&
 echo "" &&
 echo "Change the StartFile Spec and Standard Include Dir" &&
 echo " so that GCC looks in ${TOOLS}" &&
 cp -v gcc/config/linux.h{,.orig} &&
+echo "" >> gcc/config/linux.h &&
 echo "#undef STANDARD_INCLUDE_DIR" >> gcc/config/linux.h &&
 echo "#define STANDARD_INCLUDE_DIR \"${TOOLS}/include/\"" >> gcc/config/linux.h &&
 echo "" >> gcc/config/linux.h &&
 echo "#undef STANDARD_STARTFILE_PREFIX_1"  >> gcc/config/linux.h &&
 echo "#define STANDARD_STARTFILE_PREFIX_1 \"${TOOLS}/lib/\"" >> gcc/config/linux.h &&
+echo "" >> gcc/config/linux.h &&
 echo "#undef STANDARD_STARTFILE_PREFIX_2" >> gcc/config/linux.h &&
 echo "#define STANDARD_STARTFILE_PREFIX_2 \"\"" >> gcc/config/linux.h &&
 echo "GCC static linux.h diff" || exit $?
@@ -459,7 +460,7 @@ diff -u gcc/config/linux.h.orig gcc/config/linux.h
 echo ""
 echo "alter gcc's c preprocessor's default include search path" &&
 echo " to use ${TOOLS} only" &&
-cp -v gcc/Makefile.in{,.orig}
+cp -v gcc/Makefile.in{,.orig} &&
 sed -e "s@\(^CROSS_SYSTEM_HEADER_DIR =\).*@\1 ${TOOLS}/include@g" \
     gcc/Makefile.in.orig > gcc/Makefile.in &&
 echo "GCC static Makefile diff" || exit $?
@@ -575,8 +576,8 @@ END_OF_MSG
 tar xf ${SOURCES}/$GCC &&
 pushd gcc* &&
 echo "GCC patch" &&
-echo "applying gcc-4.5.2-pure64_specs-1.patch" &&
-patch -Np1 -i ${PATCHES}/gcc-4.5.2-pure64_specs-1.patch &&
+echo "applying gcc-4.6.0-pure64_specs-1.patch" &&
+patch -Np1 -i ${PATCHES}/gcc-4.6.0-pure64_specs-1.patch &&
 echo "" &&
 echo "Change the StartFile Spec and Standard Include Dir so that GCC looks" &&
 echo " in ${TOOLS}" &&
