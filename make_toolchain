@@ -27,6 +27,7 @@ export CROSS_HOST=$(echo ${MACHTYPE} | sed -e 's/-[^-]*/-cross/')
 LINUX="linux-2.6.38.4.tar.bz2"
 FILE="file-5.06.tar.gz"
 NCURSES="ncurses-5.9.tar.gz"
+NCURSES_BASH_FIX="ncurses-5.9-bash_fix-1.patch"
 GMP="gmp-5.0.1.tar.bz2"
 MPFR="mpfr-3.0.1.tar.bz2"
 MPC="mpc-0.9.tar.gz"
@@ -37,7 +38,7 @@ LIBC="glibc-2.13.tar.xz"
 #LIBC="eglibc-2.13-r13356.tar.bz2"
 #LIBC="eglibc-2.12-r12509.tar.bz2"
 GCC="gcc-4.6.0.tar.bz2"
-
+GCC_SPECS_PATCH="gcc-4.6.0-pure64_specs-1.patch"
 
 export SYSROOT="/lfs"
 export CROSSTOOLS="/cross-tools"
@@ -70,7 +71,7 @@ CROSS_HOST=${CROSS_HOST}
 
 LINUX=$LINUX
 FILE=$FILE
-NCURSES=$NCURSES
+NCURSES=$NCURSES with $NCURSES_BASH_FIX
 GMP=$GMP
 MPFR=$MPFR
 PPL=$PPL
@@ -78,7 +79,7 @@ MPC=$MPC
 CLOOGPPL=$CLOOGPPL
 BINUTILS=$BINUTILS
 LIBC=$LIBC
-GCC=$GCC
+GCC=$GCC with ${GCC_SPECS_PATCH}
 
 CROSSTOOLS=${CROSSTOOLS}
 TOOLS=${TOOLS}
@@ -180,9 +181,9 @@ END_OF_MSG
 tar xf ${SOURCES}/$NCURSES &&
 pushd ncurses* &&
 echo "NCURSES (tic) patch"
-echo "applying ncurses-5.9-bash_fix-1.patch" &&
+echo "applying ${NCURSES_BASH_FIX}" &&
 echo " (which fixes an issue with some Bash versions)" &&
-patch -Np1 -i ${PATCHES}/ncurses-5.9-bash_fix-1.patch &&
+patch -Np1 -i ${PATCHES}/${NCURSES_BASH_FIX} &&
 echo "NCURSES (tic) configure" &&
 ./configure \
   --prefix=${CROSSTOOLS} \
@@ -440,21 +441,15 @@ END_OF_MSG
 tar xf ${SOURCES}/$GCC &&
 pushd gcc* &&
 echo "GCC static patch" &&
-echo "applying gcc-4.6.0-pure64_specs-1.patch" &&
-patch -Np1 -i ${PATCHES}/gcc-4.6.0-pure64_specs-1.patch &&
+echo "applying ${GCC_SPECS_PATCH}" &&
+patch -Np1 -i ${PATCHES}/${GCC_SPECS_PATCH} &&
 echo "" &&
 echo "Change the StartFile Spec and Standard Include Dir" &&
 echo " so that GCC looks in ${TOOLS}" &&
 cp -v gcc/config/linux.h{,.orig} &&
-echo "" >> gcc/config/linux.h &&
-echo "#undef STANDARD_INCLUDE_DIR" >> gcc/config/linux.h &&
-echo "#define STANDARD_INCLUDE_DIR \"${TOOLS}/include/\"" >> gcc/config/linux.h &&
-echo "" >> gcc/config/linux.h &&
-echo "#undef STANDARD_STARTFILE_PREFIX_1"  >> gcc/config/linux.h &&
-echo "#define STANDARD_STARTFILE_PREFIX_1 \"${TOOLS}/lib/\"" >> gcc/config/linux.h &&
-echo "" >> gcc/config/linux.h &&
-echo "#undef STANDARD_STARTFILE_PREFIX_2" >> gcc/config/linux.h &&
-echo "#define STANDARD_STARTFILE_PREFIX_2 \"\"" >> gcc/config/linux.h &&
+echo -en '#undef STANDARD_INCLUDE_DIR\n#define STANDARD_INCLUDE_DIR "/tools/include/"\n\n' >> gcc/config/linux.h &&
+echo -en '\n#undef STANDARD_STARTFILE_PREFIX_1\n#define STANDARD_STARTFILE_PREFIX_1 "/tools/lib/"\n' >> gcc/config/linux.h &&
+echo -en '\n#undef STANDARD_STARTFILE_PREFIX_2\n#define STANDARD_STARTFILE_PREFIX_2 ""\n' >> gcc/config/linux.h &&
 echo "GCC static linux.h diff" || exit $?
 diff -u gcc/config/linux.h.orig gcc/config/linux.h
 echo ""
@@ -576,19 +571,15 @@ END_OF_MSG
 tar xf ${SOURCES}/$GCC &&
 pushd gcc* &&
 echo "GCC patch" &&
-echo "applying gcc-4.6.0-pure64_specs-1.patch" &&
-patch -Np1 -i ${PATCHES}/gcc-4.6.0-pure64_specs-1.patch &&
+echo "applying ${GCC_SPECS_PATCH}" &&
+patch -Np1 -i ${PATCHES}/${GCC_SPECS_PATCH} &&
 echo "" &&
 echo "Change the StartFile Spec and Standard Include Dir so that GCC looks" &&
 echo " in ${TOOLS}" &&
 cp -v gcc/config/linux.h{,.orig} &&
-echo "#undef STANDARD_INCLUDE_DIR" >> gcc/config/linux.h &&
-echo "#define STANDARD_INCLUDE_DIR \"${TOOLS}/include\"" >> gcc/config/linux.h &&
-echo "" >> gcc/config/linux.h &&
-echo "#undef STANDARD_STARTFILE_PREFIX_1" >> gcc/config/linux.h &&
-echo "#define STANDARD_STARTFILE_PREFIX_1 \"${TOOLS}/lib\"" >> gcc/config/linux.h &&
-echo "#undef STANDARD_STARTFILE_PREFIX_2" >> gcc/config/linux.h &&
-echo "#define STANDARD_STARTFILE_PREFIX_2 \"\"" >> gcc/config/linux.h &&
+echo -en '#undef STANDARD_INCLUDE_DIR\n#define STANDARD_INCLUDE_DIR "/tools/include/"\n\n' >> gcc/config/linux.h &&
+echo -en '\n#undef STANDARD_STARTFILE_PREFIX_1\n#define STANDARD_STARTFILE_PREFIX_1 "/tools/lib/"\n' >> gcc/config/linux.h &&
+echo -en '\n#undef STANDARD_STARTFILE_PREFIX_2\n#define STANDARD_STARTFILE_PREFIX_2 ""\n' >> gcc/config/linux.h &&
 echo "GCC linux.h diff" || exit $?
 diff -u gcc/config/linux.h.orig gcc/config/linux.h
 echo "" &&
