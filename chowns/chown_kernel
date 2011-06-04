@@ -1,0 +1,8 @@
+#!/bin/bash
+#
+for NAME in \
+/lib/firmware
+do
+  chown -vhR kernel:install ${NAME}
+done
+

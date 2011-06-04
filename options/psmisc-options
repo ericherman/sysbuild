@@ -1,0 +1,25 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  ./configure \
+    --prefix=/usr \
+    --exec-prefix=""
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  echo "no make check"
+}
+
+function install_commands()
+{
+  make install &&
+  mv -v /bin/pstree* /usr/bin &&
+  echo "INSTALL COMPLETE"
+}

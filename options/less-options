@@ -1,0 +1,25 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  echo "no tests"
+}
+
+function install_commands()
+{
+  make install &&
+  mv -v /usr/bin/less /bin &&
+  echo "INSTALL COMPLETE"
+}

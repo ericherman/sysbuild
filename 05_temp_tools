@@ -1,0 +1,210 @@
+#!/bin/bash
+#
+# Copyright (C) 2011 Eric Herman
+# license: http://www.gnu.org/licenses/lgpl-2.1.html
+#
+# initially thrown together by Eric Herman on 2011 May 04
+#
+# much of this is simply automating Cross-Compiled Linux From Scratch
+#  http://cross-lfs.org/
+#   Copyright (C) 2005-2010 Joe Ciccone, Jim Gifford & Ryan Oliver
+#   license: http://www.opencontent.org/openpub/
+#
+# CLFS is based upon Based on LFS, as well.
+#  http://www.linuxfromscratch.org/lfs/
+#   Copyright (C) 1999-2010 Gerard Beekmans
+#   license: Attribution-NonCommercial-ShareAlike 2.0
+#
+# some inspiration was from DIY Linux
+#  http://diy-linux.org/
+#   Copyright (C) 2004-2008, 2009 Greg Schafer
+#   license: http://www.gnu.org/licenses/fdl.html
+#
+
+export MAKEFLAGS='-j 10'
+
+export TOOLS="/tools"
+export SOURCES="/data/sources/tarballs"
+export PATCHES="/data/sources/patches"
+export BUILD="/build"
+
+export KERNEL_CONFIG="${SOURCES}/kernel_config_temp-2.6.38.4-cross1.config"
+
+set +h
+export LC_ALL=POSIX
+export PATH=/bin:/usr/bin:/sbin:/usr/sbin:/tools/bin:/tools/sbin
+export LC_ALL PATH PS1
+export BUILD64="-m64"
+
+export KERNEL_VERSION="2.6.38.4"
+
+echo "environment:"
+env | sort
+echo ""
+
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                  TOOLS BUILD BEGINS
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+END_OF_MSG
+
+pushd ${BUILD}
+
+rm -rf ${BUILD}/*
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ tcl
+
+ Tool Command Language
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+if [ -e ${TOOLS}/bin/tclsh ];
+then
+echo "tcl complete; skipping"
+else
+tar xf ${SOURCES}/tcl* &&
+pushd tcl* &&
+cd unix &&
+echo "CONFIGURE tcl" &&
+./configure --prefix=${TOOLS} &&
+echo "MAKE temp tcl" &&
+make &&
+echo "INSTALL tools tcl" &&
+make install &&
+make install-private-headers &&
+ln -sv tclsh8.5 /tools/bin/tclsh &&
+echo "YAY tools tcl" || exit $?
+popd
+echo "CLEANUP tools tcl"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ expect
+
+ scripted dialogue tool
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+if [ -e ${TOOLS}/bin/expect ];
+then
+echo "expect complete; skipping"
+else
+tar xf ${SOURCES}/expect* &&
+pushd expect* &&
+echo "CONFIGURE expect" &&
+./configure --prefix=${TOOLS} \
+    --with-tcl=${TOOLS}/lib \
+    --with-tclinclude=${TOOLS}/include &&
+echo "MAKE temp expect" &&
+make &&
+echo "INSTALL tools expect" &&
+make SCRIPTS="" install &&
+echo "YAY tools expect" || exit $?
+popd
+echo "CLEANUP tools expect"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ deja
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/bin/something ];
+#then
+#echo "deja complete; skipping"
+#else
+tar xf ${SOURCES}/deja* &&
+pushd deja* &&
+echo "CONFIGURE deja" &&
+./configure --prefix=${TOOLS} &&
+echo "MAKE temp deja" &&
+echo "no make" &&
+echo "INSTALL tools deja" &&
+make install &&
+echo "YAY tools deja" || exit $?
+popd
+echo "CLEANUP tools deja"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ perl
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/bin/something ];
+#then
+#echo "perl complete; skipping"
+#else
+tar xf ${SOURCES}/perl* &&
+pushd perl* &&
+echo "PATCH perl" &&
+patch -Np1 -i ${PATCHES}/perl-5.12.2-libc-1.patch &&
+sed -i 's@/usr/include@/tools/include@g' ext/Errno/Errno_pm.PL
+echo "CONFIGURE perl" &&
+./configure.gnu --prefix=${TOOLS} -Dcc="gcc" &&
+echo "MAKE temp perl" &&
+make &&
+echo "INSTALL tools perl" &&
+make install &&
+ln -sfv ${TOOLS}/bin/perl /usr/bin &&
+echo "YAY tools perl" || exit $?
+popd
+echo "CLEANUP tools perl"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ shadow
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/bin/something ];
+#then
+#echo "shadow complete; skipping"
+#else
+tar xf ${SOURCES}/shadow* &&
+pushd shadow* &&
+echo "CONFIGURE shadow" &&
+./configure \
+    --prefix=${TOOLS} \
+    --sysconfdir=/etc \
+    --without-selinux \
+    --without-libpam \
+    --disable-nls \
+    --without-audit &&
+echo "MAKE temp shadow" &&
+make &&
+echo "INSTALL tools shadow" &&
+make install &&
+sed -i "/CREATE_MAIL_SPOOL/s/yes/no/" /etc/default/useradd &&
+echo "YAY tools shadow" || exit $?
+popd
+echo "CLEANUP tools shadow"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi

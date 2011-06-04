@@ -1,0 +1,29 @@
+#!/bin/bash
+function configure_commands()
+{
+  sed -i 's@etc/adjtimer@var/lib/hwclock/sdjtime@g' \
+    hwclock/hwclock.c &&
+  mkdir /var/lib/hwclock &&
+  ./configure \
+    --enable-arch \
+    --enable-partx \
+    --enable-write \
+    --disable-wall
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  echo "no tests"
+}
+
+function install_commands()
+{
+  make install &&
+  mv -v /usr/bin/logger /bin &&
+  echo "INSTALL COMPLETE"
+}

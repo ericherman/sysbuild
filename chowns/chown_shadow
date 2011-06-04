@@ -1,0 +1,29 @@
+#!/bin/bash
+#
+echo "some of the man pages are also owned by 'man-pages'" &&
+echo " we will consider the 'shadow' installed versions" &&
+echo " to be authorative."
+for NAME in \
+/bin/login \
+/bin/su \
+/sbin/sulogin \
+/usr/bin/chfn \
+/usr/bin/chsh \
+/usr/bin/grub-mkpasswd-pbkdf2 \
+/usr/bin/newgrp \
+/usr/sbin/vigr \
+/usr/sbin/vipw \
+/usr/share/man/man1/chfn.1 \
+/usr/share/man/man1/chsh.1 \
+/usr/share/man/man1/login.1 \
+/usr/share/man/man1/newgrp.1 \
+/usr/share/man/man8/sulogin.8 \
+/usr/share/man/man8/vigr.8 \
+/usr/share/man/man8/vipw.8 \
+/usr/share/man/man3/getspnam.3 \
+/usr/share/man/man5/passwd.5 \
+/usr/share/man/man3/login.3 \
+/usr/share/man/man5/nologin.5
+do
+  chown -vh shadow:shadow ${NAME}
+done

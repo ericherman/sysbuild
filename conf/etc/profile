@@ -1,0 +1,16 @@
+# Begin /etc/profile
+
+export LANG=en_US.utf8
+export INPUTRC=/etc/inputrc
+
+# check the window size after each command and, if necessary,
+# update the values of LINES and COLUMNS.
+shopt -s checkwinsize
+
+eval "`dircolors -b`"
+alias ls='ls --color=auto'
+
+export HISTSIZE=10000
+export HISTCONTROL=ignoredups
+
+# End /etc/profile

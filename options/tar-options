@@ -1,0 +1,26 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  FORCE_UNSAFE_CONFIGURE=1 \
+    ./configure \
+      --prefix=/usr \
+      --bindir=/bin \
+      --libexecdir=/usr/sbin
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  make check
+}
+
+function install_commands()
+{
+  make install &&
+  echo "INSTALL COMPLETE"
+}

@@ -1,0 +1,26 @@
+#!/bin/bash
+#
+mkdir -pv /etc/sysconfig/network-devices/ifconfig.eth0
+mkdir -pv /etc/default
+
+for NAME in \
+ profile \
+ resolv.conf \
+ inittab \
+ rsyslog.conf \
+ fstab \
+ inputrc \
+ vimrc
+do
+  cp -v conf/etc/${NAME} /etc
+done
+
+cp -v conf/etc/default/grub /etc/default/
+
+cp -v conf/etc/sysconfig/network /etc/sysconfig/
+cp -v conf/etc/sysconfig/clock   /etc/sysconfig/
+
+cp -v conf/etc/sysconfig/network-devices/ifconfig.eth0/dhcpcd \
+          /etc/sysconfig/network-devices/ifconfig.eth0/
+
+#

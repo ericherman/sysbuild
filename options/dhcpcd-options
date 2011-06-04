@@ -1,0 +1,27 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  ./configure \
+    --prefix=/usr \
+    --sbindir=/sbin \
+    --sysconfdir=/etc \
+    --dbdir=/var/lib/dhcpcd \
+    --libexecdir=/usr/lib/dhcpcd
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  echo "no make check"
+}
+
+function install_commands()
+{
+  make install &&
+  echo "INSTALL COMPLETE"
+}

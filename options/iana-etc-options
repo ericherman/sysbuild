@@ -1,0 +1,21 @@
+#!/bin/bash
+function configure_commands()
+{
+  echo "no configure"
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  echo "no test"
+}
+
+function install_commands()
+{
+  make install &&
+  echo "INSTALL COMPLETE"
+}

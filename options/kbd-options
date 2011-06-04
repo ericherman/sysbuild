@@ -1,0 +1,24 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  ./configure \
+    --prefix=/usr
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  echo "no test"
+}
+
+function install_commands()
+{
+  make install &&
+  mv -v /usr/bin/{kbd_mode,dumpkeys,loadkeys,openvt,setfont} /bin &&
+  echo "INSTALL COMPLETE"
+}

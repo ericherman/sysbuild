@@ -1,0 +1,15 @@
+" Begin /etc/vimrc
+
+set nocompatible
+set backspace=2
+set ruler
+syntax on
+
+set backupcopy=auto,breakhardlink
+let java_space_errors = 1
+let c_space_errors=1
+highlight ExtraWhitespace ctermbg=red guibg=red
+" Show trailing whitepace and spaces before a tab:
+match ExtraWhitespace /\s\+$\| \+\ze\t/
+
+" End /etc/vimrc

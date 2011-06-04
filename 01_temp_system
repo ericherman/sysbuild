@@ -21,6 +21,8 @@
 #   license: http://www.gnu.org/licenses/fdl.html
 #
 
+export MAKEFLAGS='-j 10'
+
 export CROSS_TARGET="x86_64-unknown-linux-gnu"
 export KERNEL_ARCH="ARCH=x86_64"
 export BUILD64="-m64"
@@ -39,8 +41,6 @@ unset CFLAGS
 unset CXXFLAGS
 
 export PATH=${CROSSTOOLS}/bin:${PATH}
-
-#export MAKEFLAGS='-j 10'
 
 export CC="${CROSS_TARGET}-gcc"
 export CXX="${CROSS_TARGET}-g++"
@@ -355,14 +355,14 @@ pushd gcc* &&
 echo "PATCH tools gcc" &&
 patch -Np1 -i ${PATCHES}/gcc-*-pure64_specs*.patch &&
 echo "Change the StartFile Spec and Standard Include Dir so that GCC looks in ${TOOLS}" &&
-echo -en '#undef STANDARD_INCLUDE_DIR\n#define STANDARD_INCLUDE_DIR "${TOOLS}/include/"\n\n' >> gcc/config/linux.h &&
-echo -en '\n#undef STANDARD_STARTFILE_PREFIX_1\n#define STANDARD_STARTFILE_PREFIX_1 "${TOOLS}/lib/"\n' >> gcc/config/linux.h &&
+echo -en '#undef STANDARD_INCLUDE_DIR\n#define STANDARD_INCLUDE_DIR "/tools/include/"\n\n' >> gcc/config/linux.h &&
+echo -en '\n#undef STANDARD_STARTFILE_PREFIX_1\n#define STANDARD_STARTFILE_PREFIX_1 "/tools/lib/"\n' >> gcc/config/linux.h &&
 echo -en '\n#undef STANDARD_STARTFILE_PREFIX_2\n#define STANDARD_STARTFILE_PREFIX_2 ""\n' >> gcc/config/linux.h &&
 echo "Also, we need to set the directory searched by the fixincludes" &&
 echo "  process for system headers, so it won't look at the host's" &&
 echo "   headers" &&
 cp -v gcc/Makefile.in{,.orig} &&
-sed -e 's@\(^NATIVE_SYSTEM_HEADER_DIR =\).*@\1 ${TOOLS}/include@g' \
+sed -e 's@\(^NATIVE_SYSTEM_HEADER_DIR =\).*@\1 /tools/include@g' \
     gcc/Makefile.in.orig > gcc/Makefile.in &&
 mkdir -v ../build-gcc &&
 cd ../build-gcc &&

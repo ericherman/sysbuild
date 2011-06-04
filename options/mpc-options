@@ -1,0 +1,25 @@
+#!/bin/bash
+function configure_commands()
+{
+  CC="gcc -isystem /usr/include" \
+  LDFLAGS="-Wl,-rpath-link,/usr/lib:/lib" \
+  EGREP="grep -E" \
+  ./configure \
+    --prefix=/usr
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  make check
+}
+
+function install_commands()
+{
+  make install &&
+  echo "INSTALL COMPLETE"
+}

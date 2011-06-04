@@ -1,0 +1,32 @@
+#!/bin/bash
+
+unset CFLAGS
+unset CXXFLAGS
+
+export CFLAGS
+export CXXFLAGS
+
+
+function configure_commands()
+{
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc \
+    --disable-werror
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  make -k check
+}
+
+function install_commands()
+{
+  make install &&
+  echo "INSTALL COMPLETE"
+}

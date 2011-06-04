@@ -1,0 +1,24 @@
+#!/bin/bash
+function configure_commands()
+{
+  make mrproper &&
+  cp ../kernel-config .config
+}
+
+function make_commands()
+{
+  make headers_check
+}
+
+function test_commands()
+{
+  echo "no test"
+}
+
+function install_commands()
+{
+  make INSTALL_HDR_PATH=dest headers_install &&
+  cp -rv dest/include/* /usr/include &&
+  find /usr/include -name .install -or -name ..install.cmd | xargs rm -fv &&
+  echo "INSTALL COMPLETE"
+}

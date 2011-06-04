@@ -1,0 +1,19 @@
+# Begin /etc/fstab
+
+# volume  mount-point       type    options                     dump    fsck
+#                                                                       order
+/dev/sda1 /windows          ntfs    defaults,umask=007,gid=46   0       0
+/dev/sda2 /                 ext3    defaults                    1       1
+/dev/sda3 /next             ext3    defaults                    0       2
+/dev/sda5 /boot             ext2    defaults                    0       2
+/dev/sda6 /xubuntu          ext3    defaults                    0       2
+/dev/sda7 swap              swap    pri=1                       0       0
+/dev/sdb1 /home             ext3    defaults                    0       2
+/dev/sdc1 /data             ext3    defaults                    0       2
+
+proc      /proc             proc    defaults                    0       0
+sysfs     /sys              sysfs   defaults                    0       0
+devpts    /dev/pts          devpts  gid=4,mode=620              0       0
+shm       /dev/shm          tmpfs   defaults                    0       0
+
+# End /etc/fstab

@@ -1,0 +1,17 @@
+#!/bin/bash
+#
+
+for file in \
+/lib/udev* \
+/sbin/udev* \
+/usr/lib/*udev* \
+/usr/include/*udev* \
+/etc/udev* \
+/usr/share/man/man*/*udev* \
+/usr/lib/pkgconfig/*udev* \
+/usr/share/pkgconfig/*udev* \
+/usr/share/gtk-doc/html/*udev*
+do
+  chown -Rhv udev:udev $file
+done
+

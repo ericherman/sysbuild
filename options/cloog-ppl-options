@@ -1,0 +1,27 @@
+#!/bin/bash
+function configure_commands()
+{
+  CC="gcc -isystem /usr/include" \
+  LDFLAGS="-Wl,-rpath-link,/usr/lib:/lib" \
+  ./configure \
+    --prefix=/usr \
+    --enable-shared \
+    --with-gmp \
+    --with-ppl
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  make check
+}
+
+function install_commands()
+{
+  make install &&
+  echo "INSTALL COMPLETE"
+}

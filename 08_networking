@@ -1,0 +1,84 @@
+#!/bin/bash
+#
+# Copyright (C) 2011 Eric Herman
+# license: http://www.gnu.org/licenses/lgpl-2.1.html
+#
+# initially thrown together by Eric Herman on 2011 June 4
+#
+# much of this is simply automating Cross-Compiled Linux From Scratch
+#  http://cross-lfs.org/
+#   Copyright (C) 2005-2010 Joe Ciccone, Jim Gifford & Ryan Oliver
+#   license: http://www.opencontent.org/openpub/
+#
+# Many changes revolve around autmoation and implementing a modified
+#  version of the ideas from Matthias S. Benkmann's package users system
+#  git://freesa.org/package-users
+#
+# CLFS is based upon Based on LFS, as well.
+#  http://www.linuxfromscratch.org/lfs/
+#   Copyright (C) 1999-2010 Gerard Beekmans
+#   license: Attribution-NonCommercial-ShareAlike 2.0
+#
+# some inspiration was from DIY Linux
+#  http://diy-linux.org/
+#   Copyright (C) 2004-2008, 2009 Greg Schafer
+#   license: http://www.gnu.org/licenses/fdl.html
+#
+
+export MAKEFLAGS='-j 10'
+
+export HOSTNAME="fromsrc"
+
+export TOOLS="/tools"
+export SOURCES="/data/sources/tarballs"
+export PATCHES="/data/sources/patches"
+export BUILD="/build"
+export REPOS="/data/sources/rcs"
+export SYSBUILD="${REPOS}/sysbuild"
+export CHOWNS="${SYSBUILD}/chowns"
+export PKGOPTS="${SYSBUILD}/options"
+
+set +h
+export LC_ALL=POSIX
+export PATH=/bin:/usr/bin:/sbin:/usr/sbin:/tools/bin:/tools/sbin
+export LC_ALL PATH
+export BUILD64="-m64"
+
+
+echo "environment:"
+env | sort
+echo ""
+
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                  BUILD BEGINS
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+END_OF_MSG
+
+pushd ${BUILD}
+
+rm -rf ${BUILD}/*
+
+if ( false ) then
+  echo "skip"
+fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ dhcpcd
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+add_package_user "Dynamic Host Configuration Protocol Client Daemon" dhcpcd
+pushd /usr/src/dhcpcd &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/dhcpcd-* . &&
+cd .. &&
+cp -v ${PKGOPTS}/dhcpcd-options ./options &&
+chown -R dhcpcd:dhcpcd /usr/src/dhcpcd &&
+su --login --command='build' dhcpcd &&
+popd &&
+echo "YAY"

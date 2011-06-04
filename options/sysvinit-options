@@ -1,0 +1,22 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  make -C src clobber
+}
+
+function make_commands()
+{
+  make -C src
+}
+
+function test_commands()
+{
+  echo "no make check"
+}
+
+function install_commands()
+{
+  make -C src install &&
+  echo "INSTALL COMPLETE"
+}

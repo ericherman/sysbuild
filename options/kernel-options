@@ -1,0 +1,33 @@
+#!/bin/bash
+
+export KERNEL_VERSION="2.6.38.4-ekh3"
+export MAKEFLAGS='-j 10'
+
+function configure_commands()
+{
+  make mrproper &&
+  cp ../kernel-config .config &&
+  make oldconfig
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  echo "no test"
+}
+
+function install_commands()
+{
+  make modules_install &&
+  cp -v arch/x86_64/boot/bzImage \
+    /boot/vmlinuz-${KERNEL_VERSION} &&
+  cp -v System.map \
+    /boot/System.map-${KERNEL_VERSION} &&
+  cp -v .config \
+    /boot/config-${KERNEL_VERSION} &&
+  echo "INSTALL COMPLETE"
+}

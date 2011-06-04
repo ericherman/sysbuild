@@ -1,0 +1,30 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  sed -i -e 's:ln -s -f $(prefix)/bin/:lin -s :' Makefile &&
+  make -f Makefile-libbz2_so &&
+  make clean
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  echo "no tests"
+}
+
+function install_commands()
+{
+  make PREFIX=/usr install &&
+  cp -v bzip2-shared /bin/bzip2 &&
+  cp -av libbz2.so* /lib &&
+  ln -sv ../../lib/libbz2.so.1.0 /usr/lib/libbz2.so &&
+  rm -v /usr/bin/{bunzip2,bzcat,bzip2} &&
+  ln -sv bzip2 /bin/bunzip2 &&
+  ln -sv bzip2 /bin/bzcat &&
+  echo "INSTALL COMPLETE"
+}

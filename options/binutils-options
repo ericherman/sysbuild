@@ -1,0 +1,39 @@
+#!/bin/bash
+
+export BUILD_DIR=../build-binutils
+
+function configure_commands()
+{
+  CC="gcc -isystem /usr/include" \
+  LDFLAGS="-Wl,-rpath-link,/usr/lib:/lib" \
+  ../binutils*/configure \
+    --prefix=/usr \
+    --libdir=/usr/lib \
+    --enable-shared \
+    --disable-multilib \
+    --enable-64-bit-bfd
+}
+
+function make_commands()
+{
+  make configure-host &&
+  make tooldir=/usr
+}
+
+function test_commands()
+{
+  pwd &&
+  ln -sv /lib /lib64 &&
+  make -k check &&
+  rm -v /lib64 &&
+  rm -v /usr/lib64/libstd*so* &&
+  rmdir -v /usr/lib64 &&
+  echo "YAY tests" || echo "DARN $? oh well"
+}
+
+function install_commands()
+{
+  make tooldir=/usr install &&
+  cp -v ../binutils*/include/libiberty.h /usr/include &&
+  echo "INSTALL COMPLETE"
+}

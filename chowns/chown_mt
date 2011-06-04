@@ -1,0 +1,23 @@
+#!/bin/bash
+#
+for NAME in \
+/sbin/depmod \
+/share/man/man5/depmod.conf.5 \
+/share/man/man8/depmod.8 \
+/sbin/insmod \
+/sbin/insmod.static \
+/share/man/man8/insmod.8 \
+/bin/lsmod \
+/share/man/man8/lsmod.8 \
+/sbin/modinfo \
+/share/man/man8/modinfo.8 \
+/sbin/modprobe \
+/share/man/man5/modprobe.conf.5 \
+/share/man/man5/modprobe.d.5 \
+/share/man/man8/modprobe.8 \
+/sbin/rmmod \
+/share/man/man8/rmmod.8
+do
+  chown -v module-tools:module-tools ${NAME}
+done
+

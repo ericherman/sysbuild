@@ -1,0 +1,27 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  PAGE=A4 \
+   ./configure \
+     --prefix=/usr
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  echo "no tests"
+}
+
+function install_commands()
+{
+  make install &&
+  ln -sv soelim /usr/bin/zsoelin &&
+  ln -sv eqn /usr/bin/geqn &&
+  ln -sv tbl /usr/bin/gtbl &&
+  echo "INSTALL COMPLETE"
+}

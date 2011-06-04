@@ -1,0 +1,25 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  ./configure \
+    --prefix=/usr \
+    --bindir=/bin
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  make check
+}
+
+function install_commands()
+{
+  make install &&
+  mv -v /bin/z{egrep,cmp,diff,fgrep,force,grep,less,more,new} /usr/bin &&
+  echo "INSTALL COMPLETE"
+}

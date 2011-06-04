@@ -1,0 +1,14 @@
+#!/bin/bash
+
+for NAME in \
+/lib/udev/devices/fd \
+/lib/udev/devices/stdin \
+/lib/udev/devices/stdout \
+/lib/udev/devices/stderr \
+/lib/udev/devices/core
+do
+  chown -vh bootscripts:install ${NAME}
+done
+chown -vRh bootscripts:install /etc/rc.d
+chown -vRh bootscripts:install /etc/sysconfig
+

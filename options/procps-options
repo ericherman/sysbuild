@@ -1,0 +1,22 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  sed -i -r '/^-include/s/\*(.*)/proc\1/' Makefile
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  echo "no tests"
+}
+
+function install_commands()
+{
+  make install &&
+  echo "INSTALL COMPLETE"
+}

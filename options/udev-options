@@ -1,0 +1,31 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  ./configure \
+    --prefix=/usr \
+    --exec-prefix="" \
+    --sysconfdir=/etc \
+    --libexecdir=/lib/udev \
+    --libdir=/usr/lib \
+    --disable-extras \
+    --disable-introspection
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  echo "no make check"
+}
+
+function install_commands()
+{
+  make install &&
+  # add a test for /lib/firmware?
+  # install -dv /lib/firmware &&
+  echo "INSTALL COMPLETE"
+}

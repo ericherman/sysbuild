@@ -1,0 +1,44 @@
+#!/bin/bash
+function configure_commands()
+{
+  ./configure \
+    --prefix=/usr \
+    --libdir=/lib \
+    --with-shared \
+    --without-debug \
+    --enable-widec \
+    --with-manpage-format=normal
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  echo "no tests"
+}
+
+function install_commands()
+{
+  make install &&
+  mv -v /lib/lib{panelw,menuw,formw,ncursesw,ncurses++w}.a /usr/lib &&
+  rm -v /lib/lib{panelw,menuw,formw,ncursesw}.so &&
+  ln -svf ../../lib/libpanelw.so.5 /usr/lib/libpanelw.so &&
+  ln -svf ../../lib/libmenuw.so.5 /usr/lib/libmenuw.so &&
+  ln -svf ../../lib/libformw.so.5 /usr/lib/libformw.so &&
+  ln -svf ../../lib/libncursesw.so.5 /usr/lib/libncursesw.so &&
+  echo "libraries moved to correct location" || return $?
+  for lib in curses ncurses form panel menu ; do
+      echo "INPUT(-l${lib}w)" > /usr/lib/lib${lib}.so &&
+      ln -sfv lib${lib}w.a /usr/lib/lib${lib}.a &&
+      echo "compatibility link created for lib${lib}"
+  done
+  ln -sfv libncursesw.so /usr/lib/libcursesw.so &&
+  ln -sfv libncursesw.a /usr/lib/libcursesw.a &&
+  ln -sfv libncurses++w.a /usr/lib/libcurses++.a &&
+  ln -sfv ncursesw5-config /usr/bin/ncurses5-config &&
+  ln -sfv ../share/terminfo /usr/lib/terminfo &&
+  echo "INSTALL COMPLETE"
+}

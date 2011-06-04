@@ -1,0 +1,31 @@
+#!/bin/bash
+export BUILD_DIR=build
+
+function configure_commands()
+{
+  ../configure \
+    --prefix=/usr \
+    --with-root-prefix="" \
+    --enable-elf-shlibs \
+    --disable-libblkid \
+    --disable-libuuid \
+    --disable-fsck \
+    --disable-uuidd
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  make check
+}
+
+function install_commands()
+{
+  make install &&
+  make install-libs &&
+  echo "INSTALL COMPLETE"
+}

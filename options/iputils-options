@@ -1,0 +1,28 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  echo "no configure"
+}
+
+function make_commands()
+{
+  make IPV4_TARGETS="tracepath ping rdisc clockdiff" \
+    IPV6_TARGETS="tracepath6 traceroute6"
+}
+
+function test_commands()
+{
+  echo "no tests"
+}
+
+function install_commands()
+{
+  install -v -m755 ping /bin &&
+  install -v -m755 clockdiff /usr/bin &&
+  install -v -m755 rdisc /usr/bin &&
+  install -v -m755 tracepath /usr/bin &&
+  install -v -m755 trace{path,route}6 /bin &&
+  install -v -m644 doc/*.8 /usr/share/man/man8 &&
+  echo "INSTALL COMPLETE"
+}

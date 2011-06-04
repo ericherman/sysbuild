@@ -20,6 +20,7 @@
 #   Copyright (C) 2004-2008, 2009 Greg Schafer
 #   license: http://www.gnu.org/licenses/fdl.html
 #
+export MAKEFLAGS='-j 10'
 
 export CROSS_TARGET="x86_64-unknown-linux-gnu"
 export KERNEL_ARCH="ARCH=x86_64"
@@ -466,8 +467,9 @@ diff -u gcc/config/linux.h.orig gcc/config/linux.h
 echo ""
 echo "alter gcc's c preprocessor's default include search path" &&
 echo " to use ${TOOLS} only" &&
-cp -v gcc/Makefile.in{,.orig} &&
-sed -e "s@\(^CROSS_SYSTEM_HEADER_DIR =\).*@\1 ${TOOLS}/include@g" \
+mv -iv gcc/Makefile.in{,.orig} &&
+echo "will now sed" &&
+sed -e "s@\(^CROSS_SYSTEM_HEADER_DIR =\).*@\1 /tools/include@g" \
     gcc/Makefile.in.orig > gcc/Makefile.in &&
 echo "GCC static Makefile diff" || exit $?
 diff -u gcc/Makefile.in.orig gcc/Makefile.in
@@ -597,7 +599,7 @@ echo "" &&
 echo "alter gcc's c preprocessor's default include search path" &&
 echo " to use /tools only" &&
 cp -v gcc/Makefile.in{,.orig} &&
-sed -e "s@\(^CROSS_SYSTEM_HEADER_DIR =\).*@\1 ${TOOLS}/include@g" \
+sed -e "s@\(^CROSS_SYSTEM_HEADER_DIR =\).*@\1 /tools/include@g" \
     gcc/Makefile.in.orig > gcc/Makefile.in &&
 echo "will now diff" || exit $?
 diff -u gcc/Makefile.in.orig gcc/Makefile.in

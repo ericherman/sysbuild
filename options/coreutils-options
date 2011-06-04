@@ -1,0 +1,34 @@
+#!/bin/bash
+function configure_commands()
+{
+  ./configure \
+    --prefix=/usr \
+    --enable-no-install-program=kill,uptime \
+    --enable-install-program=hostname
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  make check || echo "Darn $? .... Oh, well."
+}
+
+function install_commands()
+{
+  make install &&
+  cp -v src/su /bin/su.coreutils &&
+  echo "be FHS compliant" &&
+  mv -v /usr/bin/{cat,chgrp,chmod,chown,cp,date} /bin &&
+  mv -v /usr/bin/{dd,df,echo,false,hostname,ln,ls,mkdir,mknod} /bin &&
+  mv -v /usr/bin/{mv,pwd,rm,rmdir,stty,true,uname} /bin &&
+  mv -v /usr/bin/chroot /usr/sbin &&
+  echo "move other boot-script-critial programs to /bin" &&
+  mv -v /usr/bin/{[,basename,head,install,nice} /bin &&
+  mv -v /usr/bin/{readlink,sleep,sync,test,touch} /bin &&
+  ln -svf ../../bin/install /usr/bin &&
+  echo "INSTALL COMPLETE"
+}

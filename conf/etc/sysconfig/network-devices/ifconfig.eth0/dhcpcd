@@ -1,0 +1,12 @@
+# Begin /etc/sysconfig/network-devices/ifconfig.eth0
+
+ONBOOT="yes"
+SERVICE="dhcpcd"
+
+# Start command for DHCPCD
+DHCP_START="-q"
+
+# Stop command for DHCPCD
+DHCP_STOP="-k"
+
+# End /etc/sysconfig/network-devices/ifconfig.eth0

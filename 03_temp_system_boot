@@ -1,0 +1,470 @@
+#!/bin/bash
+#
+# Copyright (C) 2011 Eric Herman
+# license: http://www.gnu.org/licenses/lgpl-2.1.html
+#
+# initially thrown together by Eric Herman on 2011 May 04
+#
+# much of this is simply automating Cross-Compiled Linux From Scratch
+#  http://cross-lfs.org/
+#   Copyright (C) 2005-2010 Joe Ciccone, Jim Gifford & Ryan Oliver
+#   license: http://www.opencontent.org/openpub/
+#
+# CLFS is based upon Based on LFS, as well.
+#  http://www.linuxfromscratch.org/lfs/
+#   Copyright (C) 1999-2010 Gerard Beekmans
+#   license: Attribution-NonCommercial-ShareAlike 2.0
+#
+# some inspiration was from DIY Linux
+#  http://diy-linux.org/
+#   Copyright (C) 2004-2008, 2009 Greg Schafer
+#   license: http://www.gnu.org/licenses/fdl.html
+#
+
+export MAKEFLAGS='-j 10'
+
+export CROSS_TARGET="x86_64-unknown-linux-gnu"
+export ARCH_TARGET="x86_64"
+export KERNEL_ARCH="ARCH=x86_64"
+export BUILD64="-m64"
+export CROSS_HOST=$(echo ${MACHTYPE} | sed -e 's/-[^-]*/-cross/')
+
+export SYSROOT="/lfs"
+export CROSSTOOLS="/cross-tools"
+export TOOLS="/tools"
+export SOURCES="/lfs/sources/tarballs"
+export PATCHES="/lfs/sources/patches"
+export BUILD="/lfs/build"
+export BUILD_CC="$(which cc)"
+
+export KERNEL_CONFIG="${SOURCES}/kernel_config_temp-2.6.38.4-cross1.config"
+
+set +h
+umask 022
+export LC_ALL=POSIX
+unset CFLAGS
+unset CXXFLAGS
+
+export PATH=${CROSSTOOLS}/bin:${PATH}
+
+
+export CC="${CROSS_TARGET}-gcc"
+export CXX="${CROSS_TARGET}-g++"
+export AR="${CROSS_TARGET}-ar"
+export AS="${CROSS_TARGET}-as"
+export RANLIB="${CROSS_TARGET}-ranlib"
+export LD="${CROSS_TARGET}-ld"
+export STRIP="${CROSS_TARGET}-strip"
+
+echo "CFLAGS and CXXFLAGS must not be set during the building of tools"
+echo "CFLAGS=$CFLAGS";
+echo "CXXFLAGS=$CXXFLAGS"
+echo "PWD: `pwd`";
+
+export KERNEL_VERSION="2.6.38.4"
+
+echo "environment:"
+env | sort
+echo ""
+
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                  TOOLS BUILD BEGINS
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+END_OF_MSG
+
+pushd ${BUILD}
+
+rm -rf ${BUILD}/*
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ util-linux
+
+ utilities for handling file systems, consoles, partitions, etc.
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/bin/something ];
+#then
+#echo "util-linux complete; skipping"
+#else
+tar xf ${SOURCES}/util-linux* &&
+pushd util-linux* &&
+echo "CONFIGURE util-linux" &&
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --enable-login-utils \
+    --disable-makeinstall-chown
+echo "MAKE temp util-linux" &&
+make &&
+echo "INSTALL tools util-linux" &&
+make DESTDIR=${SYSROOT} install &&
+echo "Copy Libraries and includes to ${TOOLS}" &&
+rm -fv ${SYSROOT}/usr/lib/lib{blkid,uuid}.la &&
+cp -v ${SYSROOT}/usr/lib/lib{blkid,uuid}* ${TOOLS}/lib &&
+cp -v ${SYSROOT}/lib/lib{blkid,uuid}* ${TOOLS}/lib &&
+ln -sfv libblkid.so.1.1.0 ${TOOLS}/lib/libblkid.so &&
+ln -sfv libuuid.so.1.3.0 ${TOOLS}/lib/libuuid.so &&
+install -dv ${TOOLS}/include/{blkid,uuid} &&
+cp -av ${SYSROOT}/usr/include/blkid/* ${TOOLS}/include/blkid/ &&
+cp -av ${SYSROOT}/usr/include/uuid/* ${TOOLS}/include/uuid/ &&
+echo "YAY tools util-linux" || exit $?
+popd
+echo "CLEANUP tools util-linux"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ e2fsprogs
+
+ utilities for the ext2, ext3, ext4 file systems
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/bin/something ];
+#then
+#echo "e2fsprogs complete; skipping"
+#else
+tar xf ${SOURCES}/e2fsprogs* &&
+pushd e2fsprogs* &&
+mkdir -v build &&
+cd build &&
+echo "CONFIGURE e2fsprogs" &&
+LDFLAGS="-Wl,-rpath-link,${TOOLS}/lib" \
+ CC="${CC} ${BUILD64}" \
+ PKG_CONFIG=true \
+  ../configure \
+    --prefix=${TOOLS} \
+    --enable-elf-shlibs \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --disable-libblkid \
+    --disable-libuuid \
+    --disable-fsck \
+    --disable-uuidd &&
+echo "MAKE tools e2fsprogs" &&
+make LIBUUID="-luuid" \
+     STATIC_LIBUUID="-luuid" \
+     LIBBLKID="-lblkid" \
+     STATIC_LIBBLKID="-lblkid" &&
+echo "INSTALL tools e2fsprogs" &&
+make install &&
+make install-libs &&
+ln -sv ${TOOLS}/sbin/{fsck.ext2,fsck.ext3,fsck.ext4,e2fsck} ${SYSROOT}/sbin &&
+echo "YAY tools e2fsprogs" || exit $?
+popd
+echo "CLEANUP tools e2fsprogs"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ sysvinit
+
+ programs for controlling system startup, running, and shutdown
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/bin/something ];
+#then
+#echo "sysvinit complete; skipping"
+#else
+tar xf ${SOURCES}/sysvinit* &&
+pushd sysvinit* &&
+echo "CONFIGURE sysvinit" &&
+cp -v src/Makefile{,.orig}
+sed -e "s,/usr/lib,${TOOLS}/lib,g" \
+    src/Makefile.orig > src/Makefile &&
+echo "MAKE tools sysvinit" &&
+make -C src clobber &&
+make -C src CC="${CC} ${BUILD64}" &&
+echo "INSTALL tools sysvinit" &&
+make -C src ROOT=${SYSROOT} install &&
+echo "YAY tools sysvinit" || exit $?
+echo "Create a new file ${SYSROOT}/etc/inittab and " &&
+echo " add the standard virtual terminals" &&
+cat > ${SYSROOT}/etc/inittab << "EOF"
+# Begin /etc/inittab
+
+id:3:initdefault:
+
+si::sysinit:/etc/rc.d/init.d/rc sysinit
+
+l0:0:wait:/etc/rc.d/init.d/rc 0
+l1:S1:wait:/etc/rc.d/init.d/rc 1
+l2:2:wait:/etc/rc.d/init.d/rc 2
+l3:3:wait:/etc/rc.d/init.d/rc 3
+l4:4:wait:/etc/rc.d/init.d/rc 4
+l5:5:wait:/etc/rc.d/init.d/rc 5
+l6:6:wait:/etc/rc.d/init.d/rc 6
+
+ca:12345:ctrlaltdel:/sbin/shutdown -t1 -a -r now
+
+su:S016:once:/sbin/sulogin
+
+1:2345:respawn:/sbin/agetty -I '\033(K' tty1 9600
+2:2345:respawn:/sbin/agetty -I '\033(K' tty2 9600
+3:2345:respawn:/sbin/agetty -I '\033(K' tty3 9600
+4:2345:respawn:/sbin/agetty -I '\033(K' tty4 9600
+5:2345:respawn:/sbin/agetty -I '\033(K' tty5 9600
+6:2345:respawn:/sbin/agetty -I '\033(K' tty6 9600
+
+# End /etc/inittab
+EOF
+popd
+echo "CLEANUP tools sysvinit"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ module-init-tools
+
+ programs for handling kernel modules in Linux kernels
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/bin/something ];
+#then
+#echo "module-init-tools complete; skipping"
+#else
+tar xf ${SOURCES}/module-init-tools* &&
+pushd module-init-tools* &&
+echo "CONFIGURE module-init-tools" &&
+CC="${CC} ${BUILD64}" \
+  ./configure \
+    --prefix=/ \
+    --bindir=/bin \
+    --sbindir=/sbin \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} &&
+echo "MAKE temp module-init-tools" &&
+make DOCBOOKTOMAN=true &&
+echo "INSTALL tools module-init-tools" &&
+make DESTDIR=${SYSROOT} install &&
+echo "YAY tools module-init-tools" || exit $?
+popd
+echo "CLEANUP tools module-init-tools"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ udev
+
+ programs for handling kernel modules in Linux kernels
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/bin/something ];
+#then
+#echo "udev complete; skipping"
+#else
+tar xf ${SOURCES}/udev-1* &&
+pushd udev* &&
+echo "CONFIGURE udev" &&
+CC="${CC} ${BUILD64}" \
+ LIBS="-lpthread" \
+  ./configure \
+    --prefix=/usr \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --exec-prefix="" \
+    --sysconfdir=/etc \
+    --libexecdir=/lib/udev \
+    --libdir=/usr/lib \
+    --disable-extras \
+    --disable-introspection &&
+echo "MAKE temp udev" &&
+make &&
+echo "INSTALL tools udev" &&
+make DESTDIR=${SYSROOT} install &&
+echo "YAY tools udev" || exit $?
+popd
+echo "CLEANUP tools udev"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+cat > ${SYSROOT}/etc/passwd << "EOF"
+root:x:0:0:root:/root:/bin/bash
+EOF
+
+cat > ${SYSROOT}/etc/group << "EOF"
+root:x:0:
+bin:x:1:
+sys:x:2:
+kmem:x:3:
+tty:x:4:
+tape:x:5:
+daemon:x:6:
+floppy:x:7:
+disk:x:8:
+lp:x:9:
+dialout:x:10:
+audio:x:11:
+video:x:12:
+utmp:x:13:
+usb:x:14:
+cdrom:x:15:
+EOF
+
+echo "make some log files" &&
+touch ${SYSROOT}/var/run/utmp ${SYSROOT}/var/log/{btmp,lastlog,wtmp} &&
+chmod -v 664 ${SYSROOT}/var/run/utmp ${SYSROOT}/var/log/lastlog &&
+chmod -v 600 ${SYSROOT}/var/log/btmp &&
+echo "YAY" || exit $?;
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ linux
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/bin/something ];
+#then
+#echo "linux complete; skipping"
+#else
+tar xf ${SOURCES}/linux* &&
+pushd linux* &&
+echo "CONFIGURE linux" &&
+make mrproper &&
+cp ${KERNEL_CONFIG} .config &&
+make ${KERNEL_ARCH} CROSS_COMPILE=${CROSS_TARGET}- oldconfig &&
+echo "MAKE temp linux" &&
+make ${KERNEL_ARCH} CROSS_COMPILE=${CROSS_TARGET}- &&
+echo "INSTALL tools linux" &&
+make ${KERNEL_ARCH} CROSS_COMPILE=${CROSS_TARGET}- \
+  INSTALL_MOD_PATH=${SYSROOT} modules_install &&
+cp -v arch/${ARCH_TARGET}/boot/bzImage \
+    ${SYSROOT}/boot/vmlinuz-temp-${KERNEL_VERSION} &&
+cp -v System.map ${SYSROOT}/boot/System.map-temp-${KERNEL_VERSION} &&
+cp -v .config ${SYSROOT}/boot/config-temp-${KERNEL_VERSION} &&
+echo "YAY tools linux" || exit $?
+popd
+echo "CLEANUP tools linux"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ grub
+
+ Grand Unified Boot Loader
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/bin/something ];
+#then
+#echo "grub complete; skipping"
+#else
+unset MAKEFLAGS
+tar xf ${SOURCES}/grub* &&
+pushd grub* &&
+echo "PATCH grub" &&
+patch -Np1 -i ${PATCHES}/grub-1.98-gentrigtables_cross_compile-1.patch &&
+echo "CONFIGURE grub" &&
+./configure --prefix=/usr \
+    --build=${CROSS_HOST} \
+    --host=${CROSS_TARGET} \
+    --sysconfdir=/etc \
+    --disable-werror &&
+echo "MAKE temp grub" &&
+make &&
+echo "INSTALL tools grub" &&
+make DESTDIR=${SYSROOT} install &&
+echo "YAY tools grub" || exit $?
+popd
+echo "CLEANUP tools grub"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+
+cat > ${SYSROOT}/root/.bash_profile << "EOF"
+set +h
+PS1='\u:\w\$ '
+LC_ALL=POSIX
+EOF
+echo "PATH=/bin:/usr/bin:/sbin:/usr/sbin:${TOOLS}/bin:${TOOLS}/sbin" \
+    >> ${SYSROOT}/root/.bash_profile &&
+cat >> ${SYSROOT}/root/.bash_profile << "EOF"
+export LC_ALL PATH PS1
+EOF
+echo export BUILD64=\""${BUILD64}\"" >> ${SYSROOT}/root/.bash_profile
+
+cat > ${SYSROOT}/etc/fstab << "EOF"
+# Begin /etc/fstab
+
+# file system  mount-point  type    options                   dump  fsck
+#                                                             order
+/dev/sda1 /windows          ntfs    defaults,umask=007,gid=46 0       0
+/dev/sda2 /                 ext3    defaults                  0       2
+/dev/sda3 /next             ext3    defaults                  0       2
+/dev/sda5 /boot             ext2    defaults                  0       2
+/dev/sda6 /xubuntu          ext3    defaults                  0       2
+/dev/sda7 swap              swap    pri=1                     0       0
+/dev/sdb1 /home             ext3    defaults                  0       2
+/dev/sdc1 /data             ext3    defaults                  0       2
+
+proc      /proc             proc   defaults                   0       0
+sysfs     /sys              sysfs  defaults                   0       0
+devpts    /dev/pts          devpts gid=4,mode=620             0       0
+shm       /dev/shm          tmpfs  defaults                   0       0
+# End /etc/fstab
+EOF
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ bootscripts
+
+ set of scripts to start/stop the CLFS system at bootup/shutdown
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#if [ -e ${TOOLS}/bin/something ];
+#then
+#echo "bootscripts complete; skipping"
+#else
+tar xf ${SOURCES}/bootscripts* &&
+pushd bootscripts* &&
+echo "INSTALL tools bootscripts" &&
+make DESTDIR=${SYSROOT} install-minimal &&
+echo "YAY tools bootscripts" || exit $?
+popd
+echo "CLEANUP tools bootscripts"
+pwd
+rm -rf ${BUILD}/*
+ls -l
+#fi
+
+cat > ${SYSROOT}/etc/sysconfig/clock << "EOF"
+# Begin /etc/sysconfig/clock
+
+UTC=1
+
+# End /etc/sysconfig/clock
+EOF
+
+
+
+popd
+echo "WOOT"
+

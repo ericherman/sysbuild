@@ -1,0 +1,24 @@
+#!/bin/bash
+function configure_commands()
+{
+  GLIB_CFLAGS="-I/usr/include/glib-2.0 -I/usr/lib/glib-2.0/include" \
+  GLIB_LIBS="-lglib-2.0" \
+  ./configure \
+    --prefix=/usr
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  make -k check || echo "DARN $? Oh, well."
+}
+
+function install_commands()
+{
+  make install &&
+  echo "INSTALL COMPLETE"
+}

@@ -1,0 +1,29 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  ./configure \
+    --prefix=/usr \
+    --libdir=/lib
+}
+
+function make_commands()
+{
+  make SHLIB_LIBS=-lncurses
+}
+
+function test_commands()
+{
+  echo "no tests"
+}
+
+function install_commands()
+{
+  make install &&
+  make install-doc &&
+  mv -v /lib/lib{readline,history}.a /usr/lib &&
+  rm -v /lib/lib{readline,history}.so &&
+  ln -svf ../../lib/libreadline.so.6 /usr/lib/libreadline.so &&
+  ln -svf ../../lib/libhistory.so.6 /usr/lib/libhistory.so &&
+  echo "INSTALL COMPLETE"
+}

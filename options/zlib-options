@@ -1,0 +1,27 @@
+#!/bin/bash
+function configure_commands()
+{
+  CC="gcc -isystem /usr/include" \
+  CXX="g++ -isystem /usr/include" \
+  LDFLAGS="-Wl,-rpath-link,/usr/lib:/lib" \
+  ./configure \
+    --prefix=/usr
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  make check
+}
+
+function install_commands()
+{
+  make install &&
+  mv -v /usr/lib/libz.so.* /lib &&
+  ln -svf ../../lib/libz.so.1 /usr/lib/libz.so &&
+  echo "INSTALL COMPLETE"
+}

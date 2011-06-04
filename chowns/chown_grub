@@ -1,0 +1,13 @@
+#!/bin/bash
+#
+for NAME in \
+/boot \
+/usr/bin/grub* \
+/usr/lib/grub \
+/etc/grub.d
+do
+  chown -vhR grub:install ${NAME}
+done
+
+find /usr/share -name *grub* \
+ -exec chown -vh grub:install \{} \;

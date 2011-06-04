@@ -1,0 +1,24 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  sed -i '/^TARGETS/s@arpd@@g' misc/Makefile
+}
+
+function make_commands()
+{
+  make DESTDIR= DOCDIR=/usr/share/doc/iproute2 \
+    MANDIR=/usr/share/man
+}
+
+function test_commands()
+{
+  echo "no tests"
+}
+
+function install_commands()
+{
+  make DESTDIR= DOCDIR=/usr/share/doc/iproute2 \
+    MANDIR=/usr/share/man install &&
+  echo "INSTALL COMPLETE"
+}

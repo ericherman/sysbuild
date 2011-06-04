@@ -1,0 +1,85 @@
+#!/bin/bash
+#
+# Copyright (C) 2011 Eric Herman
+# license: http://www.gnu.org/licenses/lgpl-2.1.html
+#
+# initially thrown together by Eric Herman on 2011 May 15
+#
+# much of this is simply automating Cross-Compiled Linux From Scratch
+#  http://cross-lfs.org/
+#   Copyright (C) 2005-2010 Joe Ciccone, Jim Gifford & Ryan Oliver
+#   license: http://www.opencontent.org/openpub/
+#
+# CLFS is based upon Based on LFS, as well.
+#  http://www.linuxfromscratch.org/lfs/
+#   Copyright (C) 1999-2010 Gerard Beekmans
+#   license: Attribution-NonCommercial-ShareAlike 2.0
+#
+# some inspiration was from DIY Linux
+#  http://diy-linux.org/
+#   Copyright (C) 2004-2008, 2009 Greg Schafer
+#   license: http://www.gnu.org/licenses/fdl.html
+#
+
+export MAKEFLAGS='-j 10'
+
+export TOOLS="/tools"
+export SOURCES="/data/sources/tarballs"
+export PATCHES="/data/sources/patches"
+export BUILD="/build"
+export REPOS="/data/sources/rcs"
+
+export KERNEL_CONFIG="${SOURCES}/kernel_config_temp-2.6.38.4-cross1.config"
+
+set +h
+export LC_ALL=POSIX
+export PATH=/bin:/usr/bin:/sbin:/usr/sbin:/tools/bin:/tools/sbin
+export LC_ALL PATH PS1
+export BUILD64="-m64"
+
+export KERNEL_VERSION="2.6.38.4"
+
+echo "environment:"
+env | sort
+echo ""
+
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                  BUILD BEGINS
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+END_OF_MSG
+
+pushd ${BUILD}
+
+rm -rf ${BUILD}/*
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ package users
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+SKEL="/etc/pkgusr/skel-package" &&
+pushd ${REPOS}/package-users &&
+echo "INSTALLING package-users" &&
+make &&
+echo "ldconfig:x:9998:" >> /etc/group &&
+cp -v /etc/group /etc/group.orig &&
+sed -e "s/9999:pkgusr/9999:pkgusr,ldconfig/" /etc/group.orig > /etc/group &&
+echo "ldconfig:x:9998:9998:ldconfig:/var/log:/bin/false" >> /etc/passwd &&
+cp -v ${SKEL}/.bash_profile{,.orig} &&
+sed -e "s/i686/x86_64/" \
+ ${SKEL}/.bash_profile.orig > ${SKEL}/.bash_profile.tmp &&
+sed -e \
+ "s/-march=prescott -O3 -pipe -fomit-frame-pointer/-march=native -02 -pipe/" \
+ ${SKEL}/.bash_profile.tmp > ${SKEL}/.bash_profile &&
+echo 'export BUILD64="-m64"' >> ${SKEL}/.bash_profile &&
+set_install_dirs &&
+create_lfs_users &&
+chown_lfs_symlinks &&
+chown -R grub:grub /usr/sbin/grub* &&
+echo "YAY packge_users" || exit $?
+popd
+

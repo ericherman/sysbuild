@@ -1,0 +1,28 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  sed -i "s/\(make\)\( all\)/\1 DOCBOOKTOMAN=true\2/" tests/runtests &&
+  ./tests/runtests &&
+  ./configure \
+    --prefix=/usr \
+    --bindir=/bin \
+    --sbindir=/sbin \
+    --enable-zlib-dynamic
+}
+
+function make_commands()
+{
+  make DOCBOOKTOMAN=true
+}
+
+function test_commands()
+{
+  echo "see pre-config output"
+}
+
+function install_commands()
+{
+  make install &&
+  echo "INSTALL COMPLETE"
+}

@@ -1,0 +1,27 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  ./configure \
+    --prefix=/usr \
+    --libexecdir=/usr/lib/locate \
+    --localstatedir=/var/lib/locate
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  make -k check || echo "Darn $? .... Oh, well."
+}
+
+function install_commands()
+{
+  make install &&
+  mv -v /usr/bin/find /bin &&
+  sed -i 's@find:={BINDIR}@find:=/bin@' /usr/bin/updatedb &&
+  echo "INSTALL COMPLETE"
+}

@@ -1,0 +1,1318 @@
+#!/bin/bash
+#
+# Copyright (C) 2011 Eric Herman
+# license: http://www.gnu.org/licenses/lgpl-2.1.html
+#
+# initially thrown together by Eric Herman on 2011 May 15
+#
+# much of this is simply automating Cross-Compiled Linux From Scratch
+#  http://cross-lfs.org/
+#   Copyright (C) 2005-2010 Joe Ciccone, Jim Gifford & Ryan Oliver
+#   license: http://www.opencontent.org/openpub/
+#
+# Many changes revolve around autmoation and implementing a modified
+#  version of the ideas from Matthias S. Benkmann's package users system
+#  git://freesa.org/package-users
+#
+# CLFS is based upon Based on LFS, as well.
+#  http://www.linuxfromscratch.org/lfs/
+#   Copyright (C) 1999-2010 Gerard Beekmans
+#   license: Attribution-NonCommercial-ShareAlike 2.0
+#
+# some inspiration was from DIY Linux
+#  http://diy-linux.org/
+#   Copyright (C) 2004-2008, 2009 Greg Schafer
+#   license: http://www.gnu.org/licenses/fdl.html
+#
+
+export MAKEFLAGS='-j 10'
+
+export HOSTNAME="fromsrc"
+
+export TOOLS="/tools"
+export SOURCES="/data/sources/tarballs"
+export PATCHES="/data/sources/patches"
+export BUILD="/build"
+export REPOS="/data/sources/rcs"
+export SYSBUILD="${REPOS}/sysbuild"
+export CHOWNS="${SYSBUILD}/chowns"
+export PKGOPTS="${SYSBUILD}/options"
+
+export KERNEL_CONFIG="${SOURCES}/kernel-2.6.38.4-ekh3.config"
+export KERNEL_VERSION="2.6.38.4"
+
+LIBC="eglibc-2.13-r13356.tar.bz2"
+
+set +h
+export LC_ALL=POSIX
+export PATH=/bin:/usr/bin:/sbin:/usr/sbin:/tools/bin:/tools/sbin
+export LC_ALL PATH
+export BUILD64="-m64"
+
+
+echo "environment:"
+env | sort
+echo ""
+
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+                  BUILD BEGINS
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+
+END_OF_MSG
+
+pushd ${BUILD}
+
+rm -rf ${BUILD}/*
+
+if ( false ) then
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ kernel_headers
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "linux kernel headers" kernel-headers &&
+pushd /usr/src/kernel-headers &&
+ln -sv linux-${KERNEL_VERSION} kernel-headers &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/linux-${KERNEL_VERSION}.tar.bz2 . &&
+cd .. &&
+cp -v ${PKGOPTS}/kernel-headers-options ./options &&
+cp -v ${KERNEL_CONFIG} ./kernel-config &&
+chown kernel-headers:kernel-headers /usr/src/kernel-headers &&
+su --login --command="build" kernel-headers &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ man-pages
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "manual pages" man-pages &&
+pushd /usr/src/man-pages &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/man-pages-3* . &&
+cd .. &&
+cp -v ${PKGOPTS}/man-pages-options ./options &&
+chown -R man-pages:man-pages /usr/src/man-pages &&
+su --login --command="build" man-pages &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ eglibc
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "standard C library" eglibc &&
+pushd /usr/src/eglibc &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/${LIBC} . &&
+cd .. &&
+cp -v ${PKGOPTS}/eglibc-options ./options &&
+chown -R eglibc:eglibc /usr/src/eglibc &&
+su --login --command="build" eglibc &&
+popd &&
+chown ldconfig:install /sbin/ldconfig &&
+chmod 4774 /sbin/ldconfig &&
+chown ldconfig /etc/ld.so.cache &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ adjust the toolchain
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+gcc -dumpspecs | \
+perl -p -e 's@/tools/lib/ld@/lib/ld@g;' \
+     -e 's@\*startfile_prefix_spec:\n@$_/usr/lib/ @g;' > \
+     $(dirname $(gcc --print-libgcc-file-name))/specs
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ gmp
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "GNU Multiple Percision" gmp &&
+pushd /usr/src/gmp &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/gmp* . &&
+cd .. &&
+cp -v ${PKGOPTS}/gmp-options ./options &&
+chown -R gmp:gmp /usr/src/gmp &&
+su --login --command="build" gmp &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ mpfr
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "GNU Multiple Percision" mpfr &&
+pushd /usr/src/mpfr &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/mpfr* . &&
+cd .. &&
+cp -v ${PKGOPTS}/mpfr-options ./options &&
+chown -R mpfr:mpfr /usr/src/mpfr &&
+su --login --command="build" mpfr &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ mpc
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "GNU Math Precision Correct rounding" mpc &&
+pushd /usr/src/mpc &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/mpc* . &&
+cd .. &&
+cp -v ${PKGOPTS}/mpc-options ./options &&
+chown -R mpc:mpc /usr/src/mpc &&
+su --login --command="build" mpc &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ ppl
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "Parma Poyhedra Library" ppl &&
+pushd /usr/src/ppl &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/ppl* . &&
+cd .. &&
+cp -v ${PKGOPTS}/ppl-options ./options &&
+chown -R ppl:ppl /usr/src/ppl &&
+su --login --command="build" ppl &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ cloog-ppl
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "Parma Poyhedra Library" cloog-ppl &&
+pushd /usr/src/cloog-ppl &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/cloog-ppl* . &&
+cd .. &&
+cp -v ${PKGOPTS}/cloog-ppl-options ./options &&
+chown -R cloog-ppl:cloog-ppl /usr/src/cloog-ppl &&
+su --login --command="build" cloog-ppl &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ zlib
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "Parma Poyhedra Library" zlib &&
+pushd /usr/src/zlib &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/zlib* . &&
+cd .. &&
+cp -v ${PKGOPTS}/zlib-options ./options &&
+chown -R zlib:zlib /usr/src/zlib &&
+su --login --command="build" zlib &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ binutils
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "Parma Poyhedra Library" binutils &&
+pushd /usr/src/binutils &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/binutils* . &&
+cd .. &&
+cp -v ${PKGOPTS}/binutils-options ./options &&
+chown -R binutils:binutils /usr/src/binutils &&
+chown -R binutils:binutils /usr/lib64 &&
+su --login --command="build" binutils &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ gcc
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "GCC" gcc &&
+pushd /usr/src/gcc &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/gcc* . &&
+cd .. &&
+mkdr patches &&
+cd patches &&
+ln -sv ${PATCHES}/gcc-4.6.0-branch_update-1.patch &&
+ln -sv ${PATCHES}/gcc-4.6.0-pure64-1.patch &&
+cp -v ${PKGOPTS}/gcc-options ./options &&
+chown -R gcc:gcc /usr/src/gcc &&
+su --login --command="build" gcc &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ sed
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "GCC" sed &&
+pushd /usr/src/sed &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/sed* . &&
+cd .. &&
+cp -v ${PKGOPTS}/sed-options ./options &&
+chown -R sed:gcc /usr/src/gcc &&
+su --login --command="build" sed &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ ncurses
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" ncurses &&
+pushd /usr/src/ncurses &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/ncurses* . &&
+cd .. &&
+mkdir patches &&
+cd patches &&
+ln -sv ${PATCHES}/ncurses-*-branch_update*patch &&
+cd .. &&
+cp -v ${PKGOPTS}/ncurses-options ./options &&
+chown -R ncurses:gcc /usr/src/gcc &&
+su --login --command="build" ncurses &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ glib
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+add_package_user "Gnome Library for basic C needs" glib &&
+pushd /usr/src/glib &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/glib-2* . &&
+cd .. &&
+cp -v ${PKGOPTS}/glib-options ./options &&
+chown -R glib:gcc /usr/src/gcc &&
+su --login --command="build" glib &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ pkg-config
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+add_package_user "Package Config helps insert compiler options" pkg-config &&
+pushd /usr/src/pkg-config &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/pkg-config* . &&
+cd .. &&
+cp -v ${PKGOPTS}/pkg-config-options ./options &&
+chown -R pkg-config:gcc /usr/src/gcc &&
+su --login --command="build" pkg-config &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ util-linux
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" util-linux &&
+${CHOWNS}/chown_ul &&
+pushd /usr/src/util-linux &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/util-linux* . &&
+cd .. &&
+cp -v ${PKGOPTS}/util-linux-options ./options &&
+chown -R util-linux:util-linux /usr/src/util-linux &&
+su --login --command="build" util-linux &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ e2fsprogs
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+add_package_user "utilities for ext2,3,4 filesystems" e2fsprogs &&
+chown -h e2fsprogs:e2fsprogs /sbin/e2fs* &&
+pushd /usr/src/e2fsprogs &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/e2fsprogs* . &&
+cd .. &&
+cp -v ${PKGOPTS}/e2fsprogs-options ./options &&
+chown -R e2fsprogs:e2fsprogs /usr/src/e2fsprogs &&
+su --login --command="build" e2fsprogs &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ coreutils
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#add_package_user "" coreutils &&
+chown -h coreutils:coreutils /bin/sleep &&
+pushd /usr/src/coreutils &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/coreutils* . &&
+cd .. &&
+cp -v ${PKGOPTS}/coreutils-options ./options &&
+chown -R coreutils:coreutils /usr/src/coreutils &&
+su --login --command="build" coreutils &&
+chown -v root:coreutils /bin/su.coreutils &&
+chmod -v 4775 /bin/su.coreutils &&
+ln -sv /bin/su.coreutils /bin/su &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ iana-etc
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#add_package_user "" iana-etc &&
+pushd /usr/src/iana-etc &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/iana-etc* . &&
+cd .. &&
+cp -v ${PKGOPTS}/iana-etc-options ./options &&
+chown -R iana-etc:iana-etc /usr/src/iana-etc &&
+su --login --command="build" iana-etc &&
+popd &&
+echo "YAY"
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ m4
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#add_package_user "" m4 &&
+pushd /usr/src/m4 &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/m4* . &&
+cd .. &&
+cp -v ${PKGOPTS}/m4-options ./options &&
+chown -R m4:m4 /usr/src/m4 &&
+su --login --command="build" m4 &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ bison
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#add_package_user "" bison &&
+pushd /usr/src/bison &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/bison* . &&
+cd .. &&
+cp -v ${PKGOPTS}/bison-options ./options &&
+chown -R bison:bison /usr/src/bison &&
+su --login --command="build" bison &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ procps
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#add_package_user "" procps &&
+pushd /usr/src/procps &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/procps* . &&
+cd .. &&
+mkdir patches &&
+cd patches &&
+ln -sv ${PATCHES}/procps*ps_cgroup* . &&
+ln -sv ${PATCHES}/procps*fix_HZ_errors* . &&
+cd .. &&
+cp -v ${PKGOPTS}/procps-options ./options &&
+chown -R procps:procps /usr/src/procps &&
+su --login --command="build" procps &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ libtool
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#add_package_user "" libtool &&
+pushd /usr/src/libtool &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/libtool* . &&
+cd .. &&
+cp -v ${PKGOPTS}/libtool-options ./options &&
+chown -R libtool:libtool /usr/src/libtool &&
+su --login --command="build" libtool &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ flex
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#add_package_user "" flex &&
+pushd /usr/src/flex &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/flex* . &&
+cd .. &&
+mkdir patches &&
+cd patches &&
+ln -sv ${PATCHES}/flex*gcc44* . &&
+cd .. &&
+cp -v ${PKGOPTS}/flex-options ./options &&
+chown -R flex:flex /usr/src/flex &&
+su --login --command="build" flex &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ iproute2
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+add_package_user "IPv4 networking" iproute2 &&
+pushd /usr/src/iproute2 &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/iproute2* . &&
+cd .. &&
+cp -v ${PKGOPTS}/iproute2-options ./options &&
+chown -R iproute2:iproute2 /usr/src/iproute2 &&
+su --login --command="build" iproute2 &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ enable loopback network
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+ip link set lo up &&
+hostname $HOSTNAME &&
+echo "127.0.0.1 localhost $(hostname)" > /etc/hosts &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ perl
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+add_package_user "IPv4 networking" perl &&
+pushd /usr/src/perl &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/perl* . &&
+cd .. &&
+cp -v ${PKGOPTS}/perl-options ./options &&
+chown -R perl:perl /usr/src/perl &&
+su --login --command="build" perl &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ readline
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+add_package_user "IPv4 networking" readline &&
+pushd /usr/src/readline &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/readline* . &&
+cd .. &&
+mkdir patches &&
+cd patches &&
+ln -sv ${PATCHES}/readline*branch_update* . &&
+cd .. &&
+cp -v ${PKGOPTS}/readline-options ./options &&
+chown -R readline:readline /usr/src/readline &&
+su --login --command="build" readline &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ autoconf
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" autoconf &&
+mv -v /usr/share/info/standards.info \
+      /usr/share/info/standards.info.binutils &&
+pushd /usr/src/autoconf &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/autoconf* . &&
+cd .. &&
+cp -v ${PKGOPTS}/autoconf-options ./options &&
+chown -R autoconf:autoconf /usr/src/autoconf &&
+su --login --command="build" autoconf &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ automake
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" automake &&
+pushd /usr/src/automake &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/automake* . &&
+cd .. &&
+cp -v ${PKGOPTS}/automake-options ./options &&
+chown -R automake:automake /usr/src/automake &&
+su --login --command="build" automake &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ bash
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" bash &&
+pushd /usr/src/bash &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/bash* . &&
+cd .. &&
+mkdir patches &&
+cd patches &&
+ln -sv ${PATCHES}/bash*branch_update* . &&
+cd .. &&
+cp -v ${PKGOPTS}/bash-options ./options &&
+chown -R bash:bash /usr/src/bash &&
+su --login --command="build" bash &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ bzip2
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" bzip2 &&
+pushd /usr/src/bzip2 &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/bzip2* . &&
+cd .. &&
+cp -v ${PKGOPTS}/bzip2-options ./options &&
+chown -R bzip2:bzip2 /usr/src/bzip2 &&
+su --login --command="build" bzip2 &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ diffutils
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" diffutils &&
+pushd /usr/src/diffutils &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/diffutils* . &&
+cd .. &&
+cp -v ${PKGOPTS}/diffutils-options ./options &&
+chown -R diffutils:diffutils /usr/src/diffutils &&
+su --login --command="build" diffutils &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ file
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" file &&
+pushd /usr/src/file &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/file* . &&
+cd .. &&
+cp -v ${PKGOPTS}/file-options ./options &&
+chown -R file:file /usr/src/file &&
+su --login --command="build" file &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ findutils
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" findutils &&
+pushd /usr/src/findutils &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/findutils* . &&
+cd .. &&
+cp -v ${PKGOPTS}/findutils-options ./options &&
+chown -R findutils:findutils /usr/src/findutils &&
+su --login --command="build" findutils &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ gawk
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" gawk &&
+pushd /usr/src/gawk &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/gawk* . &&
+cd .. &&
+cp -v ${PKGOPTS}/gawk-options ./options &&
+chown -R gawk:gawk /usr/src/gawk &&
+su --login --command="build" gawk &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ gettext
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" gettext &&
+pushd /usr/src/gettext &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/gettext* . &&
+cd .. &&
+cp -v ${PKGOPTS}/gettext-options ./options &&
+chown -R gettext:gettext /usr/src/gettext &&
+su --login --command="build" gettext &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ grep
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" grep &&
+pushd /usr/src/grep &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/grep* . &&
+cd .. &&
+cp -v ${PKGOPTS}/grep-options ./options &&
+chown -R grep:grep /usr/src/grep &&
+su --login --command="build" grep &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ groff
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" groff &&
+mv -v /usr/share/info/dir /usr/share/info/dir.eglibc &&
+pushd /usr/src/groff &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/groff* . &&
+cd .. &&
+cp -v ${PKGOPTS}/groff-options ./options &&
+chown -R groff:groff /usr/src/groff &&
+su --login --command="build" groff &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ gzip
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" gzip &&
+pushd /usr/src/gzip &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/gzip* . &&
+cd .. &&
+cp -v ${PKGOPTS}/gzip-options ./options &&
+chown -R gzip:gzip /usr/src/gzip &&
+su --login --command="build" gzip &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ iputils
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" iputils &&
+pushd /usr/src/iputils &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/iputils* . &&
+cd .. &&
+mkdir patches &&
+cd patches &&
+ln -sv ${PATCHES}/iputils*fixes* . &&
+ln -sv ${PATCHES}/iputils*doc* . &&
+cd .. &&
+cp -v ${PKGOPTS}/iputils-options ./options &&
+chown -R iputils:iputils /usr/src/iputils &&
+su --login --command="build" iputils &&
+chown -v root:iputils /bin/ping &&
+chmod -v 4775 /bin/ping &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ kbd
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" kbd &&
+pushd /usr/src/kbd &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/kbd* . &&
+cd .. &&
+#mkdir patches &&
+#cd patches &&
+#ln -sv ${PATCHES}/kbd*po_fix* . &&
+#cd .. &&
+cp -v ${PKGOPTS}/kbd-options ./options &&
+chown -R kbd:kbd /usr/src/kbd &&
+su --login --command="build" kbd &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ less
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" less &&
+pushd /usr/src/less &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/less* . &&
+cd .. &&
+#mkdir patches &&
+#cd patches &&
+#ln -sv ${PATCHES}/less*po_fix* . &&
+#cd .. &&
+cp -v ${PKGOPTS}/less-options ./options &&
+chown -R less:less /usr/src/less &&
+su --login --command="build" less &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ make
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" make &&
+pushd /usr/src/make &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/make* . &&
+cd .. &&
+#mkdir patches &&
+#cd patches &&
+#ln -sv ${PATCHES}/make*po_fix* . &&
+#cd .. &&
+cp -v ${PKGOPTS}/make-options ./options &&
+chown -R make:make /usr/src/make &&
+su --login --command="build" make &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ xz
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" xz &&
+pushd /usr/src/xz &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/xz* . &&
+cd .. &&
+#mkdir patches &&
+#cd patches &&
+#ln -sv ${PATCHES}/xz*po_fix* . &&
+#cd .. &&
+cp -v ${PKGOPTS}/xz-options ./options &&
+chown -R xz:xz /usr/src/xz &&
+su --login --command="build" xz &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ man
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" man &&
+pushd /usr/src/man &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/man-1* . &&
+cd .. &&
+mkdir patches &&
+cd patches &&
+ln -sv ${PATCHES}/man*i18n* . &&
+cd .. &&
+cp -v ${PKGOPTS}/man-options ./options &&
+chown -R man:man /usr/src/man &&
+su --login --command="build" man &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ module-init-tools
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" module-tools &&
+${CHOWNS}/chown_mt &&
+pushd /usr/src/module-tools &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/module-init-tools-3.12.tar.bz2 \
+  ./module-tools-3.12.tar.bz2 &&
+cd .. &&
+ln -sv ./module-init-tools-3.12 ./module-tools-3.12 &&
+cp -v ${PKGOPTS}/module-tools-options ./options &&
+chown -R module-tools:module-tools /usr/src/module-tools &&
+su --login --command='build' module-tools &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ patch
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" patch &&
+pushd /usr/src/patch &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/patch-* . &&
+cd .. &&
+cp -v ${PKGOPTS}/patch-options ./options &&
+chown -R patch:patch /usr/src/patch &&
+su --login --command='build' patch &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ psmisc
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" psmisc &&
+pushd /usr/src/psmisc &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/psmisc-* . &&
+cd .. &&
+cp -v ${PKGOPTS}/psmisc-options ./options &&
+chown -R psmisc:psmisc /usr/src/psmisc &&
+su --login --command='build' psmisc &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ shadow
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+# add_package_user "" shadow &&
+${CHOWNS}/chown_shadow &&
+pushd /usr/src/shadow &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/shadow-* . &&
+cd .. &&
+cp -v ${PKGOPTS}/shadow-options ./options &&
+chown -R shadow:shadow /usr/src/shadow &&
+su --login --command='build' shadow &&
+chown -v root:shadow /bin/su &&
+chmod -v 4775 /bin/su &&
+mv -v /sbin/sulogin /sbin/sulogin.shadow &&
+ln -sv /sbin/sulogin.shadow /sbin/sulogin &&
+pwconv &&
+grpconv &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ libestr
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+add_package_user "Essential String functions" libestr &&
+pushd /usr/src/libestr &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/libestr-* . &&
+cd .. &&
+cp -v ${PKGOPTS}/libestr-options ./options &&
+chown -R libestr:libestr /usr/src/libestr &&
+su --login --command='build' libestr &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ libee
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+add_package_user "Event Expression Library" libee &&
+pushd /usr/src/libee &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/libee-* . &&
+cd .. &&
+cp -v ${PKGOPTS}/libee-options ./options &&
+chown -R libee:libee /usr/src/libee &&
+su --login --command='build' libee &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ rsyslog
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#add_package_user "" rsyslog &&
+cp -v ${SYSBUILD}/conf/etc/rsyslog.conf \
+  /etc/rsyslog.conf &&
+pushd /usr/src/rsyslog &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/rsyslog-* . &&
+cd .. &&
+cp -v ${PKGOPTS}/rsyslog-options ./options &&
+chown -R rsyslog:rsyslog /usr/src/rsyslog &&
+su --login --command='build' rsyslog &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ sysvinit
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#add_package_user "" sysvinit &&
+cp -v ${SYSBUILD}/conf/etc/inittab /etc/inittab &&
+${CHOWNS}/chown_sv &&
+pushd /usr/src/sysvinit &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/sysvinit-* . &&
+cd .. &&
+cp -v ${PKGOPTS}/sysvinit-options ./options &&
+chown -R sysvinit:sysvinit /usr/src/sysvinit &&
+su --login --command='build' sysvinit &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ tar
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#add_package_user "" tar &&
+pushd /usr/src/tar &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/tar-* . &&
+cd .. &&
+cp -v ${PKGOPTS}/tar-options ./options &&
+chown -R tar:tar /usr/src/tar &&
+su --login --command='build' tar &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ texinfo
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#add_package_user "" texinfo &&
+pushd /usr/src/texinfo &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/texinfo-* . &&
+cd .. &&
+mkdir patches &&
+cd patches &&
+ln -sv ${PATCHES}/texinfo-*new_compressors* . &&
+cd .. &&
+cp -v ${PKGOPTS}/texinfo-options ./options &&
+chown -R texinfo:texinfo /usr/src/texinfo &&
+su --login --command='build' texinfo &&
+popd &&
+echo "YAY"
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ udev
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+grep "/usr/share/pkgconfig" /etc/pkgusr/install_dirs || echo "/usr/share/pkgconfig" >> /etc/pkgusr/install_dirs
+set_install_dirs
+#add_package_user "" udev &&
+${CHOWNS}/chown_udev &&
+pushd /usr/src/udev &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/udev-1* . &&
+cd .. &&
+cp -v ${PKGOPTS}/udev-options ./options &&
+chown -R udev:udev /usr/src/udev &&
+su --login --command='build' udev &&
+mv -v /lib/udev/devices/fd /lib/udev/devices/udev.fd
+ln -sv /lib/udev/devices/udev.fd /lib/udev/devices/fd
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ vim
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#add_package_user "" vim &&
+cp -v ${SYSBUILD}/conf/etc/vimrc /etc/vimrc &&
+pushd /usr/src/vim &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/vim-* . &&
+cd .. &&
+mkdir patches &&
+cd patches &&
+ln -sv ${PATCHES}/vim-*branch_update* . &&
+cd .. &&
+cp -v ${PKGOPTS}/vim-options ./options &&
+chown -R vim:vim /usr/src/vim &&
+su --login --command='build' vim &&
+popd &&
+echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ grub
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+#add_package_user "" grub &&
+grep "/etc/default" /etc/pkgusr/install_dirs || echo "/etc/default" >> /etc/pkgusr/install_dirs
+set_install_dirs
+${CHOWNS}/chown_grub
+cp -v ${SYSBUILD}/conf/etc/default/grub /etc/default/grub &&
+pushd /usr/src/grub &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/grub-* . &&
+cd .. &&
+cp -v ${PKGOPTS}/grub-options ./options &&
+chown -R grub:grub /usr/src/grub &&
+su --login --command='build' grub &&
+popd &&
+echo "YAY"
+fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ bootscripts
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+add_package_user "CLFS Bootscripts" bootscripts
+grep "/lib/udev/devices" /etc/pkgusr/install_dirs || echo "/lib/udev/devices" >> /etc/pkgusr/install_dirs
+set_install_dirs
+pushd /usr/src/bootscripts &&
+${CHOWNS}/chown_bs &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/bootscripts-* . &&
+cd .. &&
+cp -v ${PKGOPTS}/bootscripts-options ./options &&
+chown -R bootscripts:bootscripts /usr/src/bootscripts &&
+su --login --command='build' bootscripts &&
+popd &&
+echo "YAY"

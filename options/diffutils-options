@@ -1,0 +1,24 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  ./configure \
+    --prefix=/usr &&
+  sed -i 's@\(^#define DEFAULT_DEITOR_PROGRAM \).*@\1"vi"@' lib/config.h
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  echo "no test"
+}
+
+function install_commands()
+{
+  make install &&
+  echo "INSTALL COMPLETE"
+}

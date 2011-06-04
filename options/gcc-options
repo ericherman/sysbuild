@@ -1,0 +1,48 @@
+#!/bin/bash
+
+export BUILD_DIR=../build-gcc
+
+function configure_commands()
+{
+  echo 'supress the isntallation of libiberty.a ...'
+  echo ' we will use the one from binutils.'
+  cp -v ~/gcc-4.6.0/libiberty/Makefile.in{,.orig} &&
+  sed -i 's/install_to_$(INSTALL_DEST) //' \
+    ~/gcc-4.6.0/libiberty/Makefile.in &&
+  echo 'sed done' || return $?
+  diff -u ../gcc*/libiberty/Makefile.in{.orig,}
+  CC="gcc -isystem /usr/include" \
+  CXX="g++ -isystem /usr/include" \
+  LDFLAGS="-Wl,-rpath-link,/usr/lib:/lib" \
+  ../gcc*/configure \
+    --prefix=/usr \
+    --libexecdir=/usr/lib \
+    --enable-shared \
+    --enable-threads=posix \
+    --enable-__cxa_atexit \
+    --enable-c99 \
+    --enable-long-long \
+    --enable-clocale=gnu \
+    --enable-languages=c,c++ \
+    --disable-multilib \
+    --disable-libstdcxx-pch
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  make -k check || echo "DARN $? oh well...."
+  ../gcc*/contrib/test_summary | grep -A7 Summ
+}
+
+function install_commands()
+{
+  make install &&
+  ln -sv ../usr/bin/cpp /lib &&
+  ln -sv gcc /usr/bin/cc &&
+  echo "INSTALL COMPLETE"
+}

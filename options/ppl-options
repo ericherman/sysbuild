@@ -1,0 +1,28 @@
+#!/bin/bash
+function configure_commands()
+{
+  CPPFLAGS=-fexceptions \
+  CC="gcc -isystem /usr/include" \
+  CXX="g++ -isystem /usr/include" \
+  LDFLAGS="-Wl,-rpath-link,/usr/lib:/lib" \
+  ./configure \
+    --prefix=/usr \
+    --enable-shared \
+    --disable-optimization
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  make check
+}
+
+function install_commands()
+{
+  make install &&
+  echo "INSTALL COMPLETE"
+}

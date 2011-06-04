@@ -1,0 +1,32 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  echo "fix an issue with the russian man pages" &&
+  sed -i 's/man_MANS = $(man_nopam) /man_MANS = /' man/ru/Makefile.in &&
+  ./configure \
+    --sysconfdir=/etc &&
+  sed -i 's/groups$(EXEEXT) //' src/Makefile &&
+  find man -name Makefile -exec sed -i '/groups.1.xml/d' '{}' \; &&
+  find man -name Makefile -exec sed -i 's/groups.1//' '{}' \;
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  echo 'no make check'
+}
+
+function install_commands()
+{
+  make install &&
+  sed -i /etc/login.defs \
+    -e 's@#\(ENCRYPT_METHOD \).*@\1MD5@' \
+    -e 's@/var/spool/mail@/var/mail@' &&
+  mv -v /usr/bin/passwd /bin &&
+  echo "INSTALL COMPLETE"
+}
