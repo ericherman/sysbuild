@@ -1,0 +1,32 @@
+#!/bin/bash
+
+function configure_commands()
+{
+  ./configure \
+    --prefix=/usr \
+    --sysconfdir=/etc/ssh \
+    --libexecdir=/usr/bin \
+    --with-md5-passwords \
+    --with-privsep-path=/var/lib/sshd \
+    --with-default-path="/bin:/usr/bin" \
+    --with-superuser-path="/sbin:/bin:/usr/sbin:/usr/bin"
+}
+
+function make_commands()
+{
+  make
+}
+
+function test_commands()
+{
+  echo "no make check"
+}
+
+function install_commands()
+{
+  make install &&
+  install -v -m755 -d /usr/share/doc/openssh-5.7p1 &&
+  install -v -m644 INSTALL LICENSE OVERVIEW README* WARNING.RNG \
+      /usr/share/doc/openssh-5.7p1 &&
+  echo "INSTALL COMPLETE"
+}
