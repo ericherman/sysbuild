@@ -20,5 +20,9 @@ function install_commands()
   make install-bootscripts &&
   make install-network &&
   make install-service-dhcpcd &&
+  pushd /etc/sysconfig/network-devices/services &&
+  ln -sv /sbin/dhcpcd &&
+  popd &&
+  make install-sshd &&
   echo "INSTALL COMPLETE"
 }

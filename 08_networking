@@ -62,7 +62,6 @@ rm -rf ${BUILD}/*
 
 if ( false ) then
   echo "skip"
-fi
 
 echo ""
 cat <<END_OF_MSG
@@ -82,3 +81,54 @@ chown -R dhcpcd:dhcpcd /usr/src/dhcpcd &&
 su --login --command='build' dhcpcd &&
 popd &&
 echo "YAY"
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ openssl
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+add_package_user "Secure Socket Layer" openssl
+mv -v /usr/share/man/man3/threads.3{,.perl}
+pushd /usr/src/openssl &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/openssl-* . &&
+cd .. &&
+mkdir patches &&
+cd patches &&
+ln -sv ${PATCHES}/openssl-*fix_manpages* . &&
+cd .. &&
+cp -v ${PKGOPTS}/openssl-options ./options &&
+chown -R openssl:openssl /usr/src/openssl &&
+su --login --command='build' openssl &&
+popd &&
+echo "YAY"
+
+fi
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ openssh
+
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+groupadd -g 48 sshd &&
+useradd -c 'sshd PrivSep' -d /var/lib/sshd -g sshd -s /bin/false -u 48 sshd &&
+install -v -m700 -d /var/lib/sshd &&
+chown -v root:sys /var/lib/sshd &&
+add_package_user "Secure SHell" openssh &&
+pushd /usr/src/openssh &&
+mkdir src &&
+cd src &&
+ln -sv ${SOURCES}/openssh-* . &&
+cd .. &&
+cp -v ${PKGOPTS}/openssh-options ./options &&
+chown -R openssh:openssh /usr/src/openssh &&
+su --login --command='build' openssh &&
+popd &&
+echo "YAY"
+
+
