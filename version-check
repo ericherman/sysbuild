@@ -10,6 +10,7 @@ else
 fi
 echo ${MACHTYPE}
 if [ -e /proc/cpuinfo ]; then
+  cat /proc/cpuinfo | grep 'system type' | head -n1 | cut -d":" -f2
   cat /proc/cpuinfo | grep 'cpu model\|model name' | head -n1 | cut -d":" -f2
 else
   echo "no /proc/cpuinfo"
@@ -45,6 +46,8 @@ else
 fi
 echo "/usr/bin/cc -> `readlink -f /usr/bin/cc`"
 gcc --version | head -n1
+echo "/usr/bin/c++ -> `readlink -f /usr/bin/c++`"
+g++ --version | head -n1
 if [ -e /lib/libc/so.6 ]; then
   /lib/libc.so.6 | head -n1 | cut -d"," -f1
 else
