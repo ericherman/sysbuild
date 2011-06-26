@@ -18,6 +18,8 @@ if [ -e /proc/version ]; then
 else
   uname -a
 fi
+echo ""
+
 as --version | head -n1
 autoconf --version | head -n1
 bash --version | head -n1
@@ -61,6 +63,7 @@ tar --version | head -n1
 echo "Texinfo: `makeinfo --version | head -n1`"
 echo "tic: `tic -V`"
 echo ""
+
 DIR="/tmp/$USER"
 mkdir -p $DIR
 FILE="${DIR}/dummy"
@@ -82,6 +85,7 @@ int main(int argc, char *argv[])
 }
 EOS
 gcc -o ${FILE} ${FILE}.c
+file ${FILE} | cut -d":" -f2
 readelf -l ${FILE} | grep ': /lib'
 if [ -x ${FILE} ]; then
   HELLO=$(${FILE});
