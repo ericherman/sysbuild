@@ -8,6 +8,7 @@ if [ -e /usr/bin/arch ]; then
 else
   uname -m
 fi
+echo ${MACHTYPE}
 if [ -e /proc/cpuinfo ]; then
   cat /proc/cpuinfo | grep 'cpu model\|model name' | head -n1 | cut -d":" -f2
 else
