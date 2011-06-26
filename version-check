@@ -3,14 +3,27 @@
 
 # Simple script to list version numbers of critical development tools
 
+arch
+if [ -e /proc/cpuinfo ]; then
+  cat /proc/cpuinfo | grep 'cpu model\|model name' | head -n1 | cut -d":" -f2
+else
+  echo "no /proc/cpuinfo"
+fi
+if [ -e /proc/version ]; then
+  cat /proc/version
+else
+  uname -a
+fi
 as --version | head -n1
 autoconf --version | head -n1
 bash --version | head -n1
 echo "/bin/sh -> `readlink -f /bin/sh`"
 bison --version | head -n1
-if [ -e /usr/bin/yacc ];
-  then echo "/usr/bin/yacc -> `readlink -f /usr/bin/yacc`";
-  else echo "yacc not found"; fi
+if [ -e /usr/bin/yacc ]; then
+  echo "/usr/bin/yacc -> `readlink -f /usr/bin/yacc`";
+else
+  echo "yacc not found";
+fi
 bzip2 --version 2>&1 < /dev/null | head -n1 | cut -d" " -f1,6-
 echo -n "Coreutils: "; chown --version | head -n1 | cut -d")" -f2
 diff --version | head -n1
@@ -18,20 +31,21 @@ docbook2man --version | head -n1
 find --version | head -n1
 flex --version | head -n1
 gawk --version | head -n1
-if [ -e /usr/bin/awk ];
-  then echo "/usr/bin/awk -> `readlink -f /usr/bin/awk`";
-  else echo "awk not found"; fi
+if [ -e /usr/bin/awk ]; then
+  echo "/usr/bin/awk -> `readlink -f /usr/bin/awk`";
+else
+  echo "awk not found";
+fi
 echo "/usr/bin/cc -> `readlink -f /usr/bin/cc`"
 gcc --version | head -n1
 if [ -e /lib/libc/so.6 ]; then
-/lib/libc.so.6 | head -n1 | cut -d"," -f1
+  /lib/libc.so.6 | head -n1 | cut -d"," -f1
 else
-/lib/i386-linux-gnu/libc.so.6 | head -n1 | cut -d"," -f1
+  /lib/i386-linux-gnu/libc.so.6 | head -n1 | cut -d"," -f1
 fi
 grep --version | head -n1
 gzip --version | head -n1
 ld --version | head -n1
-cat /proc/version
 m4 --version | head -n1
 make --version | head -n1
 patch --version | head -n1
