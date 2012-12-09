@@ -36,21 +36,22 @@ To account for the possibility that the host and target are the same
 END_OF_DOCS
 export CROSS_HOST=$(echo ${MACHTYPE} | sed -e 's/-[^-]*/-cross/')
 
-LINUX="linux-2.6.38.4.tar.bz2"
-FILE="file-5.06.tar.gz"
+LINUX="linux-3.3.4.tar.bz2"
+FILE="file-5.11.tar.gz"
 NCURSES="ncurses-5.9.tar.gz"
 NCURSES_BASH_FIX="ncurses-5.9-bash_fix-1.patch"
-GMP="gmp-5.0.1.tar.bz2"
-MPFR="mpfr-3.0.1.tar.bz2"
+GMP="gmp-5.0.4.tar.xz"
+MPFR="mpfr-3.1.0.tar.xz"
 MPC="mpc-0.9.tar.gz"
-PPL="ppl-0.11.2.tar.bz2"
+PPL="ppl-0.12.1.tar.xz"
 CLOOGPPL="cloog-ppl-0.15.11.tar.gz"
-BINUTILS="binutils-2.21.tar.bz2"
-#LIBC="glibc-2.13.tar.xz"
-LIBC="eglibc-2.13-r13356.tar.bz2"
+BINUTILS="binutils-2.22.tar.bz2"
+LIBC="glibc-2.15.tar.xz"
+#LIBC="eglibc-2.13-r13356.tar.bz2"
 #LIBC="eglibc-2.12-r12509.tar.bz2"
-GCC="gcc-4.6.0.tar.bz2"
-GCC_SPECS_PATCH="gcc-4.6.0-pure64_specs-1.patch"
+GCC="gcc-4.7.0.tar.bz2"
+#GCC_SPECS_PATCH="gcc-4.6.0-pure64_specs-1.patch"
+GCC_SPECS_PATCH="gcc-4.7.0-pure64_specs-_eric_-1.patch"
 
 export SYSROOT="/lfs"
 export CROSSTOOLS="/cross-tools"
@@ -119,6 +120,8 @@ cat <<END_OF_MSG
 
 END_OF_MSG
 echo "clearing ${CROSSTOOLS} and ${TOOLS} and ${TOOLCHAIN_BUILD}"
+install -dv ${SYSROOT}/tools
+install -dv ${SYSROOT}/cross-tools
 rm -rf ${CROSSTOOLS}/*
 rm -rf ${TOOLS}/*
 rm -rf ${TOOLCHAIN_BUILD}/*
@@ -325,10 +328,6 @@ TODO : can we remove the C++ here?
 END_OF_MSG
 tar xf ${SOURCES}/$PPL &&
 pushd ppl* &&
-echo "The following fixes an issue when detecting newer versions of GMP" &&
-cp -v configure{,.orig} &&
-sed -e "s/__GMP_BITS_PER_MP_LIMB/GMP_LIMB_BITS/g" \
-    configure.orig > configure &&
 echo "PPL configure" &&
 LDFLAGS="-Wl,-rpath,${CROSSTOOLS}/lib" \
  ./configure \
@@ -336,8 +335,7 @@ LDFLAGS="-Wl,-rpath,${CROSSTOOLS}/lib" \
   --enable-shared \
   --enable-interfaces="c,cxx" \
   --disable-optimization \
-  --with-libgmp-prefix=${CROSSTOOLS} \
-  --with-libgmpxx-prefix=${CROSSTOOLS} &&
+  --with-gmp=${CROSSTOOLS} &&
 echo "PPL make" &&
 make &&
 echo "PPL install" &&
