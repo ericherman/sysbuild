@@ -20,11 +20,31 @@
 #   Copyright (C) 2004-2008, 2009 Greg Schafer
 #   license: http://www.gnu.org/licenses/fdl.html
 #
-export MAKEFLAGS='-j 10'
+
+set -x
+
+if [ 1 -eq 0 ]; then
 
 export CROSS_TARGET="x86_64-unknown-linux-gnu"
 export KERNEL_ARCH="ARCH=x86_64"
 export BUILD64="-m64"
+#export LIBC_CFLAGS='-g -O2'
+
+elif [ 1 -eq 1 ]; then
+
+export CROSS_TARGET='mipsel-unknown-linux-gnu'
+export KERNEL_ARCH='ARCH=mips'
+export BUILD64=""
+#export LIBC_CFLAGS='-g -O2'
+
+else
+
+export CROSS_TARGET="i686-unknown-linux-gnu"
+export KERNEL_ARCH="ARCH=i686"
+export BUILD64=""
+#export LIBC_CFLAGS='-march=i686 -g -O2'
+
+fi
 
 <<END_OF_DOCS
 building of the cross-compile tools needs a few variables including
@@ -36,40 +56,64 @@ To account for the possibility that the host and target are the same
 END_OF_DOCS
 export CROSS_HOST=$(echo ${MACHTYPE} | sed -e 's/-[^-]*/-cross/')
 
-LINUX="linux-3.3.4.tar.bz2"
+PROCS=$(grep -c ^processor /proc/cpuinfo)
+JOBS=$(( 2 + $PROCS ))
+export MAKEFLAGS="-j $JOBS"
+
+export MIN_KERNEL_VERSION="3.6.0"
+
+cat <<END_OF_MSG
+CROSS_TARGET=$CROSS_TARGET
+KERNEL_ARCH=$KERNEL_ARCH
+BUILD64=$BUILD64
+CROSS_HOST=$CROSS_HOST
+MIN_KERNEL_VERSION=$MIN_KERNEL_VERSION
+MAKEFLAGS=$MAKEFLAGS
+END_OF_MSG
+
+LINUX="linux-3.7.1.tar.bz2"
+BINUTILS="binutils-2.23.1.tar.bz2"
+LIBC="glibc-2.17.tar.xz"
+#GCC="gcc-4.7.2.tar.bz2"
+#GCC_SPECS_PATCH="gcc-4.7.2-specs-eric-0.patch"
+GCC="gcc-4.6.3.tar.bz2"
+GCC_SPECS_PATCH="gcc-4.6.3-specs-1.patch"
+GCC_BRANCH_UPDATE_PATCH="gcc-4.6.3-branch_update-2.patch"
+GCC_MIPS_FIX_PATCH="gcc-4.6.3-mips_fix-1.patch"
+#GMP="gmp-5.1.0.tar.xz"
+GMP="gmp-5.0.5.tar.xz"
+MPFR="mpfr-3.1.1.tar.xz"
+MPC="mpc-1.0.1.tar.gz"
+PPL="ppl-0.12.1.tar.xz"
+CLOOG="cloog-0.16.3.tar.gz"
+#CLOOG="cloog-0.17.0.tar.gz"
+#LIBC="glibc-2.15.tar.xz"
+#LIBC="eglibc-2.13-r13356.tar.bz2"
+#LIBC="eglibc-2.12-r12509.tar.bz2"
+#CLOOGPPL="cloog-ppl-0.15.11.tar.gz"
+#GCC="gcc-4.7.0.tar.bz2"
+#GCC_SPECS_PATCH="gcc-4.6.0-pure64_specs-1.patch"
+#GCC_SPECS_PATCH="gcc-4.7.0-pure64_specs-_eric_-1.patch"
+
 FILE="file-5.11.tar.gz"
 NCURSES="ncurses-5.9.tar.gz"
 NCURSES_BASH_FIX="ncurses-5.9-bash_fix-1.patch"
-GMP="gmp-5.0.4.tar.xz"
-MPFR="mpfr-3.1.0.tar.xz"
-MPC="mpc-0.9.tar.gz"
-PPL="ppl-0.12.1.tar.xz"
-CLOOGPPL="cloog-ppl-0.15.11.tar.gz"
-BINUTILS="binutils-2.22.tar.bz2"
-LIBC="glibc-2.15.tar.xz"
-#LIBC="eglibc-2.13-r13356.tar.bz2"
-#LIBC="eglibc-2.12-r12509.tar.bz2"
-GCC="gcc-4.7.0.tar.bz2"
-#GCC_SPECS_PATCH="gcc-4.6.0-pure64_specs-1.patch"
-GCC_SPECS_PATCH="gcc-4.7.0-pure64_specs-_eric_-1.patch"
+M4="m4-1.4.16.tar.xz"
+M4_NO_GETS_PATCH="m4-1.4.16-no-gets-1.patch"
 
 export SYSROOT="/lfs"
-export CROSSTOOLS="/cross-tools"
-export TOOLS="/tools"
+export CROSSTOOLS_PREFIX="/cross-tools"
+export TOOLS_PREFIX="/tools"
 #export TOOLCHAIN_BUILD=/tmp/${USER}/build_toolchain
 export TOOLCHAIN_BUILD="/lfs/build"
 export SOURCES=/lfs/sources/tarballs
 export PATCHES=/lfs/sources/patches
-export PATH=${CROSSTOOLS}/bin:${PATH}
+export PATH=${CROSSTOOLS_PREFIX}/bin:${PATH}
 export LC_ALL=POSIX
 unset CFLAGS
 unset CXXFLAGS
 set +h
 umask 022
-
-# TODO is "PREFIX" a better name than "CROSSTOOLS"?
-
-# TODO is "TARGET_PREFIX" or "LOCAL_PREFIX" a better name than "TOOLS"?
 
 # TODO convert to using the full sysroot method and eliminate the need for
 #      --prefix=/cross-tools and /tools symlinks in the root directory to the
@@ -89,13 +133,13 @@ GMP=$GMP
 MPFR=$MPFR
 PPL=$PPL
 MPC=$MPC
-CLOOGPPL=$CLOOGPPL
+CLOOG=$CLOOG
 BINUTILS=$BINUTILS
 LIBC=$LIBC
 GCC=$GCC with ${GCC_SPECS_PATCH}
 
-CROSSTOOLS=${CROSSTOOLS}
-TOOLS=${TOOLS}
+CROSSTOOLS_PREFIX=${CROSSTOOLS_PREFIX}
+TOOLS_PREFIX=${TOOLS_PREFIX}
 TOOLCHAIN_BUILD=${TOOLCHAIN_BUILD}
 SOURCES=${SOURCES}
 PATCHES=${PATCHES}
@@ -119,13 +163,14 @@ cat <<END_OF_MSG
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 
 END_OF_MSG
-echo "clearing ${CROSSTOOLS} and ${TOOLS} and ${TOOLCHAIN_BUILD}"
+echo "clearing ${CROSSTOOLS_PREFIX} and ${TOOLS_PREFIX} and ${TOOLCHAIN_BUILD}"
 install -dv ${SYSROOT}/tools
 install -dv ${SYSROOT}/cross-tools
-rm -rf ${CROSSTOOLS}/*
-rm -rf ${TOOLS}/*
+rm -rf ${CROSSTOOLS_PREFIX}/*
+rm -rf ${TOOLS_PREFIX}/*
 rm -rf ${TOOLCHAIN_BUILD}/*
-mkdir -v ${TOOLS}/lib && ln -sv lib ${TOOLS}/lib64
+mkdir -v ${TOOLS_PREFIX}/lib
+# ln -sv lib ${TOOLS_PREFIX}/lib64
 mkdir -p ${TOOLCHAIN_BUILD}
 pushd ${TOOLCHAIN_BUILD}
 echo ""
@@ -142,14 +187,14 @@ cat <<END_OF_MSG
 END_OF_MSG
 tar xf ${SOURCES}/$LINUX &&
 pushd linux* &&
-install -dv ${TOOLS}/include &&
+install -dv ${TOOLS_PREFIX}/include &&
 echo "ensure the kernel source dir is clean" &&
 make mrproper &&
 echo "sanitize raw kernel headers for use by userspace programs" &&
 make $KERNEL_ARCH headers_check &&
 echo " ... and install" &&
 make ${KERNEL_ARCH} INSTALL_HDR_PATH=dest headers_install &&
-cp -rv dest/include/* ${TOOLS}/include &&
+cp -rv dest/include/* ${TOOLS_PREFIX}/include &&
 echo "YAY Linux-Headers" || exit $?
 
 popd
@@ -172,7 +217,7 @@ tar xf ${SOURCES}/$FILE &&
 pushd file* &&
 echo "FILE configure" &&
 ./configure \
-  --prefix=${CROSSTOOLS} &&
+  --prefix=${CROSSTOOLS_PREFIX} &&
 echo "FILE make" &&
 make &&
 echo "FILE install" &&
@@ -188,8 +233,40 @@ ls -l
 echo ""
 cat <<END_OF_MSG
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+ M4
+       $M4
+       The M4 package contains a macro processor.
+
+       TODO: why
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
+END_OF_MSG
+tar xf ${SOURCES}/$M4 &&
+pushd m4* &&
+echo "M4 patch" &&
+patch -Np1 -i ${PATCHES}/${M4_NO_GETS_PATCH} &&
+echo "M4 configure" &&
+./configure \
+  --prefix=${CROSSTOOLS_PREFIX} &&
+echo "M4 make" &&
+make &&
+echo "M4 install" &&
+make install &&
+echo "M4 YAY" || exit $?
+
+popd
+echo "M4 removing build dir"
+pwd
+rm -rf m4*
+ls -l
+
+
+echo ""
+cat <<END_OF_MSG
+- - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  NCURSES (tic)
       $NCURSES
+      The Ncurses package contains libraries for terminal-independent
+      handling of character screens.
       Only one binary (tic) is needed for the Cross-Tools.
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 END_OF_MSG
@@ -201,7 +278,7 @@ echo " (which fixes an issue with some Bash versions)" &&
 patch -Np1 -i ${PATCHES}/${NCURSES_BASH_FIX} &&
 echo "NCURSES (tic) configure" &&
 ./configure \
-  --prefix=${CROSSTOOLS} \
+  --prefix=${CROSSTOOLS_PREFIX} \
   --without-debug \
   --without-shared &&
 echo "NCURSES (tic) make" &&
@@ -210,7 +287,7 @@ make -C include &&
 echo " Build only tic" &&
 make -C progs tic &&
 echo "NCURSES (tic) install" &&
-install -m755 progs/tic ${CROSSTOOLS}/bin &&
+install -m755 progs/tic ${CROSSTOOLS_PREFIX}/bin &&
 echo "NCURSES (tic) YAY" || exit $?
 
 popd
@@ -225,8 +302,6 @@ cat <<END_OF_MESSAGE
      $GMP
      GMP is a library for arithmetic on arbitrary precision integers,
      rational numbers, and floating-point numbers.
-
-TODO : can we remove the host requirement of a C++ compiler here?
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 END_OF_MESSAGE
 
@@ -235,8 +310,9 @@ pushd gmp* &&
 echo "GMP configure" &&
 CPPFLAGS=-fexceptions \
  ./configure \
-  --prefix=${CROSSTOOLS} \
-  --enable-cxx &&
+  --prefix=${CROSSTOOLS_PREFIX} \
+  --enable-cxx \
+  --disable-static &&
 echo "GMP make" &&
 make &&
 echo "GMP install" &&
@@ -265,11 +341,12 @@ pushd mpfr* &&
 #echo "   grabbed on 2010-12-19" &&
 #patch -N -Z -p1 -i ${PATCHES}/mpfr-3.0.0-branch_update-1.patch &&
 echo "MPFR configure" &&
-LDFLAGS="-Wl,-rpath,${CROSSTOOLS}/lib" \
+LDFLAGS="-Wl,-rpath,${CROSSTOOLS_PREFIX}/lib" \
  ./configure \
-    --prefix=${CROSSTOOLS} \
+    --prefix=${CROSSTOOLS_PREFIX} \
     --enable-shared \
-    --with-gmp=${CROSSTOOLS} &&
+    --disable-static \
+    --with-gmp=${CROSSTOOLS_PREFIX} &&
 echo "MPFR make" &&
 make &&
 echo "MPFR install" &&
@@ -298,11 +375,12 @@ END_OF_MSG
 tar xf ${SOURCES}/$MPC &&
 pushd mpc* &&
 echo "MPC configure" &&
-LDFLAGS="-Wl,-rpath,${CROSSTOOLS}/lib" \
+LDFLAGS="-Wl,-rpath,${CROSSTOOLS_PREFIX}/lib" \
  ./configure \
-    --prefix=${CROSSTOOLS} \
-    --with-gmp=${CROSSTOOLS} \
-    --with-mpfr=${CROSSTOOLS} &&
+    --prefix=${CROSSTOOLS_PREFIX} \
+    --disable-static \
+    --with-gmp=${CROSSTOOLS_PREFIX} \
+    --with-mpfr=${CROSSTOOLS_PREFIX} &&
 echo "MPC make" &&
 make &&
 echo "MPC install" &&
@@ -321,21 +399,21 @@ cat <<END_OF_MSG
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
  PPL
       $PPL
-      Parma Polyhedra Library (required by CLooG-PPL)
-
-TODO : can we remove the C++ here?
+      Parma Polyhedra Library (required by CLooG)
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 END_OF_MSG
 tar xf ${SOURCES}/$PPL &&
 pushd ppl* &&
 echo "PPL configure" &&
-LDFLAGS="-Wl,-rpath,${CROSSTOOLS}/lib" \
+CPPFLAGS="-I${CROSSTOOLS_PREFIX}/include" \
+LDFLAGS="-Wl,-rpath,${CROSSTOOLS_PREFIX}/lib" \
  ./configure \
-  --prefix=${CROSSTOOLS} \
+  --prefix=${CROSSTOOLS_PREFIX} \
   --enable-shared \
+  --disable-static \
   --enable-interfaces="c,cxx" \
   --disable-optimization \
-  --with-gmp=${CROSSTOOLS} &&
+  --with-gmp=${CROSSTOOLS_PREFIX} &&
 echo "PPL make" &&
 make &&
 echo "PPL install" &&
@@ -351,9 +429,9 @@ ls -l
 echo ""
 cat <<END_OF_MSG
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
- CLooG-PPL
-      $CLOOGPPL
-      CLooG-PPL is a library to generate code for scanning Z-polyhedra.
+ CLooG
+      $CLOOG
+      CLooG is a library to generate code for scanning Z-polyhedra.
       In other words, it finds code that reaches each integral point of
       one or more parameterized polyhedra.
 
@@ -361,36 +439,30 @@ cat <<END_OF_MSG
       generation code known as Graphite
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 END_OF_MSG
-tar xf ${SOURCES}/$CLOOGPPL &&
+tar xf ${SOURCES}/$CLOOG &&
 pushd cloog* &&
-#echo "CLOOGPPL patch" &&
-#echo " When CLooG-PPL 0.15.10 was packaged it was missing a few files" &&
-#echo " related to Libtool. The following patch adds them back in and" &&
-#echo " regenerted Automake and Autoconf." &&
-#patch -Np1 -i ${PATCHES}/cloog-ppl-0.15.10-autogen-1.patch &&
 echo " prevent the configure script from setting LD_LIBRARY_PATH when it" &&
 echo " finds PPL, preventing any conflicts with libraries from the host" &&
 echo " system" &&
 cp -v configure{,.orig} &&
 sed -e "/LD_LIBRARY_PATH=/d" configure.orig > configure &&
-echo "CLOOGPPL configure diff" || exit $?
+echo "CLOOG configure diff" || exit $?
 diff -u configure.orig configure
-echo "CLOOGPPL configure" &&
-LDFLAGS="-Wl,-rpath,${CROSSTOOLS}/lib" \
+echo "CLOOG configure" &&
+LDFLAGS="-Wl,-rpath,${CROSSTOOLS_PREFIX}/lib" \
  ./configure \
-  --prefix=${CROSSTOOLS} \
+  --prefix=${CROSSTOOLS_PREFIX} \
+  --disable-static \
   --enable-shared \
-  --with-bits=gmp \
-  --with-gmp=${CROSSTOOLS} \
-  --with-ppl=${CROSSTOOLS} &&
-echo "CLOOGPPL make" &&
+  --with-gmp-prefix=${CROSSTOOLS_PREFIX} &&
+echo "CLOOG make" &&
 make &&
-echo "CLOOGPPL install" &&
+echo "CLOOG install" &&
 make install &&
-echo "CLOOGPPL YAY" || exit $?
+echo "CLOOG YAY" || exit $?
 
 popd
-echo "CLOOGPPL removing build dir"
+echo "CLOOG removing build dir"
 pwd
 rm -rf cloog*
 ls -l
@@ -417,14 +489,14 @@ echo "BINUTILS configure" &&
 AR=ar \
  AS=as \
  ../binutils*/configure \
-  --prefix=${CROSSTOOLS} \
+  --prefix=${CROSSTOOLS_PREFIX} \
   --host=${CROSS_HOST} \
   --target=${CROSS_TARGET} \
   --with-sysroot=${SYSROOT} \
-  --with-lib-path=${TOOLS}/lib \
+  --with-lib-path=${TOOLS_PREFIX}/lib \
   --disable-nls \
   --enable-shared \
-  --enable-64-bit-bfd \
+  --disable-static \
   --disable-multilib &&
 echo "check host environment for tools to compile Binutils" &&
 make configure-host &&
@@ -432,7 +504,7 @@ echo "BINUTILS make" &&
 make &&
 make install &&
 echo "BINUTILS install" &&
-cp -v ../binutils*/include/libiberty.h ${TOOLS}/include &&
+cp -v ../binutils*/include/libiberty.h ${TOOLS_PREFIX}/include &&
 echo "BINUTILS YAY" || exit $?
 
 popd
@@ -451,11 +523,17 @@ END_OF_MSG
 tar xf ${SOURCES}/$GCC &&
 pushd gcc* &&
 echo "GCC static patch" &&
+echo "applying ${GCC_BRANCH_UPDATE_PATCH}" &&
+patch -Np1 -i ${PATCHES}/${GCC_BRANCH_UPDATE_PATCH} &&
+echo "" &&
 echo "applying ${GCC_SPECS_PATCH}" &&
 patch -Np1 -i ${PATCHES}/${GCC_SPECS_PATCH} &&
 echo "" &&
+echo "applying ${GCC_MIPS_FIX_PATCH}" &&
+patch -Np1 -i ${PATCHES}/${GCC_MIPS_FIX_PATCH} &&
+echo "" &&
 echo "Change the StartFile Spec and Standard Include Dir" &&
-echo " so that GCC looks in ${TOOLS}" &&
+echo " so that GCC looks in ${TOOLS_PREFIX}" &&
 cp -v gcc/config/linux.h{,.orig} &&
 echo -en '#undef STANDARD_INCLUDE_DIR\n#define STANDARD_INCLUDE_DIR "/tools/include/"\n\n' >> gcc/config/linux.h &&
 echo -en '\n#undef STANDARD_STARTFILE_PREFIX_1\n#define STANDARD_STARTFILE_PREFIX_1 "/tools/lib/"\n' >> gcc/config/linux.h &&
@@ -464,7 +542,7 @@ echo "GCC static linux.h diff" || exit $?
 diff -u gcc/config/linux.h.orig gcc/config/linux.h
 echo ""
 echo "alter gcc's c preprocessor's default include search path" &&
-echo " to use ${TOOLS} only" &&
+echo " to use ${TOOLS_PREFIX} only" &&
 mv -iv gcc/Makefile.in{,.orig} &&
 echo "will now sed" &&
 sed -e "s@\(^CROSS_SYSTEM_HEADER_DIR =\).*@\1 /tools/include@g" \
@@ -473,7 +551,7 @@ echo "GCC static Makefile diff" || exit $?
 diff -u gcc/Makefile.in.orig gcc/Makefile.in
 echo "" &&
 echo "create a dummy limits.h so the build will not use the host one" &&
-touch ${TOOLS}/include/limits.h &&
+touch ${TOOLS_PREFIX}/include/limits.h &&
 echo "" &&
 echo "The GCC documentation recommends building GCC outside of the source" &&
 echo " directory in a dedicated build directory" &&
@@ -482,28 +560,29 @@ cd ../build-gcc &&
 echo "GCC static configure" &&
 echo 'do we need?: CPPFLAGS_FOR_TARGET="--sysroot=${SYSROOT}"' &&
 echo 'do we need?: LDFLAGS_FOR_TARGET="--sysroot=${SYSROOT}"' &&
-echo 'do we need?: "---with-mpc=${CROSSTOOLS}"' &&
+echo 'do we need?: "---with-mpc=${CROSSTOOLS_PREFIX}"' &&
 AR=ar \
- LDFLAGS="-Wl,-rpath,${CROSSTOOLS}/lib" \
+ LDFLAGS="-Wl,-rpath,${CROSSTOOLS_PREFIX}/lib" \
  ../gcc*/configure \
-  --prefix=${CROSSTOOLS} \
+  --prefix=${CROSSTOOLS_PREFIX} \
   --build=${CROSS_HOST} \
   --host=${CROSS_HOST} \
   --target=${CROSS_TARGET} \
   --with-sysroot=${SYSROOT} \
-  --with-local-prefix=${TOOLS} \
-  --with-mpfr=${CROSSTOOLS} \
-  --with-gmp=${CROSSTOOLS} \
-  --with-ppl=${CROSSTOOLS} \
-  --with-cloog=${CROSSTOOLS} \
-  --without-headers \
+  --with-local-prefix=${TOOLS_PREFIX} \
+  --with-mpfr=${CROSSTOOLS_PREFIX} \
+  --with-gmp=${CROSSTOOLS_PREFIX} \
+  --with-ppl=${CROSSTOOLS_PREFIX} \
+  --with-cloog=${CROSSTOOLS_PREFIX} \
+  --enable-cloog-backend=isl \
+  --enable-languages=c \
   --with-newlib \
+  --without-headers \
   --disable-decimal-float \
   --disable-libgomp \
   --disable-libmudflap \
   --disable-libssp \
   --disable-threads \
-  --enable-languages=c \
   --disable-nls \
   --disable-shared \
   --disable-multilib &&
@@ -549,21 +628,24 @@ BUILD_CC="gcc" \
  AR="${CROSS_TARGET}-ar" \
  RANLIB="${CROSS_TARGET}-ranlib" \
  ../*libc*/configure \
-  --prefix=${TOOLS} \
+  --prefix=${TOOLS_PREFIX} \
   --host=${CROSS_TARGET} \
   --build=${CROSS_HOST} \
   --disable-profile \
   --enable-add-ons \
   --with-tls \
-  --enable-kernel=2.6.30 \
+  --enable-kernel=${MIN_KERNEL_VERSION} \
   --with-__thread \
-  --with-binutils=${CROSSTOOLS}/bin \
-  --with-headers=${TOOLS}/include \
+  --with-binutils=${CROSSTOOLS_PREFIX}/bin \
+  --with-headers=${TOOLS_PREFIX}/include \
   --cache-file=config.cache &&
 echo "LIBC build" &&
 make &&
 echo "LIBC install" &&
-make install &&
+make install inst_vardbdir=${TOOLS_PREFIX}/var/db &&
+cp -v ../*libc*/sunrpc/rpc/*.h ${TOOLS_PREFIX}/include/rpc &&
+cp -v ../*libc*/sunrpc/rpcsvc/*.h ${TOOLS_PREFIX}/include/rpcsvc &&
+cp -v ../*libc*/nis/rpcsvc/*.h ${TOOLS_PREFIX}/include/rpcsvc &&
 echo "LIBC YAY" || exit $?
 
 popd
@@ -582,11 +664,18 @@ END_OF_MSG
 tar xf ${SOURCES}/$GCC &&
 pushd gcc* &&
 echo "GCC patch" &&
+
+echo "applying ${GCC_BRANCH_UPDATE_PATCH}" &&
+patch -Np1 -i ${PATCHES}/${GCC_BRANCH_UPDATE_PATCH} &&
+echo "" &&
 echo "applying ${GCC_SPECS_PATCH}" &&
 patch -Np1 -i ${PATCHES}/${GCC_SPECS_PATCH} &&
 echo "" &&
+echo "applying ${GCC_MIPS_FIX_PATCH}" &&
+patch -Np1 -i ${PATCHES}/${GCC_MIPS_FIX_PATCH} &&
+echo "" &&
 echo "Change the StartFile Spec and Standard Include Dir so that GCC looks" &&
-echo " in ${TOOLS}" &&
+echo " in ${TOOLS_PREFIX}" &&
 cp -v gcc/config/linux.h{,.orig} &&
 echo -en '#undef STANDARD_INCLUDE_DIR\n#define STANDARD_INCLUDE_DIR "/tools/include/"\n\n' >> gcc/config/linux.h &&
 echo -en '\n#undef STANDARD_STARTFILE_PREFIX_1\n#define STANDARD_STARTFILE_PREFIX_1 "/tools/lib/"\n' >> gcc/config/linux.h &&
@@ -608,20 +697,21 @@ cd ../build-gcc &&
 echo "GCC configure" &&
 echo 'do we need?: CPPFLAGS_FOR_TARGET="--sysroot=${SYSROOT}"' &&
 echo 'do we need?: LDFLAGS_FOR_TARGET="--sysroot=${SYSROOT}"' &&
-echo 'do we need?: "---with-mpc=${CROSSTOOLS}"' &&
+echo 'do we need?: "---with-mpc=${CROSSTOOLS_PREFIX}"' &&
 AR=ar \
- LDFLAGS="-Wl,-rpath,${CROSSTOOLS}/lib" \
+ LDFLAGS="-Wl,-rpath,${CROSSTOOLS_PREFIX}/lib" \
  ../gcc*/configure \
-  --prefix=${CROSSTOOLS} \
+  --prefix=${CROSSTOOLS_PREFIX} \
   --build=${CROSS_HOST} \
   --target=${CROSS_TARGET} \
   --host=${CROSS_HOST} \
   --with-sysroot=${SYSROOT} \
-  --with-local-prefix=${TOOLS} \
-  --with-mpfr=${CROSSTOOLS} \
-  --with-gmp=${CROSSTOOLS} \
-  --with-ppl=${CROSSTOOLS} \
-  --with-cloog=${CROSSTOOLS} \
+  --with-local-prefix=${TOOLS_PREFIX} \
+  --with-mpfr=${CROSSTOOLS_PREFIX} \
+  --with-gmp=${CROSSTOOLS_PREFIX} \
+  --with-ppl=${CROSSTOOLS_PREFIX} \
+  --with-cloog=${CROSSTOOLS_PREFIX} \
+  --enable-cloog-backend=isl \
   --disable-nls \
   --enable-shared \
   --enable-languages=c,c++ \
@@ -629,6 +719,7 @@ AR=ar \
   --enable-c99 \
   --enable-long-long \
   --enable-threads=posix \
+  --disable-static \
   --disable-multilib &&
 echo "GCC make" &&
 make AS_FOR_TARGET="${CROSS_TARGET}-as" \
