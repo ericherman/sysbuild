@@ -21,12 +21,53 @@
 #   license: http://www.gnu.org/licenses/fdl.html
 #
 
-export MAKEFLAGS='-j 10'
+set -x
+
+if [ 1 -eq 0 ]; then
 
 export CROSS_TARGET="x86_64-unknown-linux-gnu"
 export KERNEL_ARCH="ARCH=x86_64"
 export BUILD64="-m64"
+#export LIBC_CFLAGS='-g -O2'
+
+elif [ 1 -eq 1 ]; then
+
+export CROSS_TARGET='mipsel-unknown-linux-gnu'
+export KERNEL_ARCH='ARCH=mips'
+export BUILD64=""
+#export LIBC_CFLAGS='-g -O2'
+
+else
+
+export CROSS_TARGET="i686-unknown-linux-gnu"
+export KERNEL_ARCH="ARCH=i686"
+export BUILD64=""
+#export LIBC_CFLAGS='-march=i686 -g -O2'
+
+fi
+
+<<END_OF_DOCS
+building of the cross-compile tools needs a few variables including
+the triplet of the host machine CROSS_HOST, target machine CROSS_TARGET
+
+To account for the possibility that the host and target are the same
+  arch, as cross-compiling won't work when host and target are the same,
+  part of the host triplet was changed slightly to add 'cross'
+END_OF_DOCS
 export CROSS_HOST=$(echo ${MACHTYPE} | sed -e 's/-[^-]*/-cross/')
+
+PROCS=$(grep -c ^processor /proc/cpuinfo)
+JOBS=$(( 2 + $PROCS ))
+export MAKEFLAGS="-j $JOBS"
+
+cat <<END_OF_MSG
+CROSS_TARGET=$CROSS_TARGET
+KERNEL_ARCH=$KERNEL_ARCH
+BUILD64=$BUILD64
+CROSS_HOST=$CROSS_HOST
+MAKEFLAGS=$MAKEFLAGS
+END_OF_MSG
+
 
 export CROSSTOOLS="/cross-tools"
 export TOOLS="/tools"
@@ -123,7 +164,7 @@ CC="${CC} ${BUILD64}" \
     --prefix=${TOOLS} \
     --build=${CROSS_HOST} \
     --host=${CROSS_TARGET} \
-    --enable-shared
+    --enable-shared &&
 echo "MAKE tools mpfr" &&
 make &&
 echo "INSTALL tools mpfr" &&
@@ -198,8 +239,8 @@ CC="${CC} ${BUILD64}" \
     --enable-interfaces="c,cxx" \
     --enable-shared \
     --disable-optimization \
-    --with-libgmp-prefix=${TOOLS} \
-    --with-libgmpxx-prefix=${TOOLS} &&
+    --with-gmp-include=${TOOLS}/include \
+    --with-gmp-lib=${TOOLS}/lib &&
 echo "config complete" || exit $?
 cat <<END_OF_MSG
 When PPL is cross-compiled, it does not check whether GMP
@@ -223,9 +264,9 @@ ls -l
 echo ""
 cat <<END_OF_MSG
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
- CLoog-PPL
+ CLooG
 
- CLooG-PPL a library to generate code for scanning Z-polyhedra.
+ CLooG a library to generate code for scanning Z-polyhedra.
  In other words, it finds code that reaches each integral point
  of one or more parameterized polyhedra.
 
@@ -252,10 +293,7 @@ CC="${CC} ${BUILD64}" \
     --prefix=${TOOLS} \
     --build=${CROSS_HOST} \
     --host=${CROSS_TARGET} \
-    --with-bits=gmp \
-    --enable-shared \
-    --with-gmp=${TOOLS} \
-    --with-ppl=${TOOLS} &&
+    --with-gmp-prefix=${TOOLS} &&
 echo "MAKE tools cloog" &&
 make &&
 echo "INSTALL tools cloog" &&
@@ -324,7 +362,6 @@ CC="${CC} ${BUILD64}" \
     --with-lib-path=${TOOLS}/lib \
     --disable-nls \
     --enable-shared \
-    --enable-64-bit-bfd \
     --disable-multilib &&
 echo "MAKE tools binutils" &&
 make configure-host &&
@@ -353,7 +390,12 @@ END_OF_MSG
 tar xf ${SOURCES}/gcc* &&
 pushd gcc* &&
 echo "PATCH tools gcc" &&
-patch -Np1 -i ${PATCHES}/gcc-*-pure64_specs*.patch &&
+
+echo "the branch update by the GCC developers:" &&
+patch -Np1 -i ${PATCHES}/gcc-?.?.?-branch_update-?.patch &&
+echo "fix GCC segfaults when compilling for Mips." &&
+patch -Np1 -i ${PATCHES}/gcc-?.?.?-mips_fix-?.patch &&
+patch -Np1 -i ${PATCHES}/gcc-?.?.?-specs-?.patch &&
 echo "Change the StartFile Spec and Standard Include Dir so that GCC looks in ${TOOLS}" &&
 echo -en '#undef STANDARD_INCLUDE_DIR\n#define STANDARD_INCLUDE_DIR "/tools/include/"\n\n' >> gcc/config/linux.h &&
 echo -en '\n#undef STANDARD_STARTFILE_PREFIX_1\n#define STANDARD_STARTFILE_PREFIX_1 "/tools/lib/"\n' >> gcc/config/linux.h &&
@@ -384,6 +426,8 @@ CC="${CC} ${BUILD64}" \
     --disable-nls \
     --enable-__cxa_atexit \
     --enable-languages=c,c++ \
+    --disable-multilib \
+    --enable-cloog-backend=isl \
     --disable-libstdcxx-pch &&
 cp -v Makefile{,.orig} &&
 sed "/^HOST_\(GMP\|PPL\|CLOOG\)\(LIBS\|INC\)/s:-[IL]/\(lib\|include\)::" \
@@ -587,6 +631,20 @@ CC="${CC} ${BUILD64}" \
     --host=${CROSS_TARGET} \
     --enable-install-program=hostname \
     --cache-file=config.cache &&
+# echo "Coreutils does not build make-prime-list properly and the build host may not be able to execute the target binary. Build it using the host compiler so it can be ran for the generation of data required for the build." &&
+# cp -v Makefile{,.orig} &&
+# sed '/src_make_prime_list/d' Makefile.orig > Makefile &&
+# depbase=`echo src/make-prime-list.o | sed 's|[^/]*$|.deps/&|;s|\.o$||'`;\
+#    gcc -std=gnu99  -I. -I./lib  -Ilib -I./lib -Isrc -I./src  \
+#    -fdiagnostics-show-option -funit-at-a-time -g -O2 -MT \
+#    src/make-prime-list.o -MD -MP -MF $depbase.Tpo -c -o src/make-prime-list.o \
+#    src/make-prime-list.c &&
+# mv -f $depbase.Tpo $depbase.Po
+# gcc -std=gnu99 -fdiagnostics-show-option -funit-at-a-time -g -O2 \
+#    -Wl,--as-needed  -o src/make-prime-list src/make-prime-list.o &&
+# echo "Remove the building of the hostname man page as it is affected by the previous commands." &&
+# cp -v Makefile{,.bak} &&
+# sed -e '/hostname.1/d' Makefile.bak > Makefile &&
 echo "MAKE tools coreutils" &&
 make &&
 echo "INSTALL tools coreutils" &&
@@ -618,6 +676,7 @@ CC="${CC} ${BUILD64}" \
     --prefix=${TOOLS} \
     --build=${CROSS_HOST} \
     --host=${CROSS_TARGET} &&
+sed -i '/gets is a security hole/d' lib/stdio.in.h &&
 echo "MAKE tools diffutils" &&
 make &&
 echo "INSTALL tools diffutils" &&
@@ -695,7 +754,6 @@ rm -rf ${BUILD}/*
 ls -l
 #fi
 
-
 echo ""
 cat <<END_OF_MSG
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
@@ -711,7 +769,7 @@ END_OF_MSG
 tar xf ${SOURCES}/flex* &&
 pushd flex* &&
 echo "PATCH tools flex" &&
-patch -Np1 -i ${PATCHES}/flex-*-gcc*-*.patch &&
+#patch -Np1 -i ${PATCHES}/flex-*-gcc*-*.patch &&
 cat > config.cache << EOF
 ac_cv_func_malloc_0_nonnull=yes
 ac_cv_func_realloc_0_nonnull=yes
@@ -825,7 +883,6 @@ CC="${CC} ${BUILD64}" \
   ./configure --prefix=${TOOLS} \
     --build=${CROSS_HOST} \
     --host=${CROSS_TARGET} \
-    --disable-perl-regexp \
     --without-included-regex \
     --cache-file=config.cache &&
 echo "MAKE tools grep" &&
@@ -899,6 +956,7 @@ CC="${CC} ${BUILD64}" \
     --build=${CROSS_HOST} \
     --host=${CROSS_TARGET} \
     --cache-file=config.cache &&
+sed -i '/gets is a security hole/d' lib/stdio.in.h &&
 echo "MAKE tools m4" &&
 make &&
 echo "INSTALL tools m4" &&
@@ -1034,6 +1092,7 @@ CC="${CC} ${BUILD64}" \
     --host=${CROSS_TARGET} \
     --cache-file=config.cache &&
 echo "MAKE tools tar" &&
+sed -i '/gets is a security hole/d' gnu/stdio.in.h &&
 make &&
 echo "INSTALL tools tar" &&
 make install &&
@@ -1136,10 +1195,35 @@ cat > /tools/etc/vimrc << "EOF"
 " Begin /etc/vimrc
 
 set nocompatible
-set backspace=2
-set ruler
-syntax on
+"set backspace=2
+set backspace=indent,eol,start  " more powerful backspacing
 
+if (&term == "iterm") || (&term == "putty")
+  set background=dark
+endif
+
+if has("syntax")
+  syntax on
+endif
+
+set history=500
+set ruler
+
+if has('gui_running')
+  " Make shift-insert work like in Xterm
+  map <S-Insert> <MiddleMouse>
+  map! <S-Insert> <MiddleMouse>
+endif
+
+" set nu
+set backupcopy=auto,breakhardlink
+let java_space_errors = 1
+let c_space_errors=1
+highlight ExtraWhitespace ctermbg=red guibg=red
+" Show trailing whitepace and spaces before a tab:
+match ExtraWhitespace /\s\+$\| \+\ze\t/
+
+hi comment ctermfg=blue
 " End /etc/vimrc
 EOF
 popd
