@@ -21,6 +21,8 @@
 #   license: http://www.gnu.org/licenses/fdl.html
 #
 
+set -x
+
 export SYSROOT="/lfs"
 export CROSSTOOLS="/cross-tools"
 export BUILD="/lfs/build"
@@ -73,12 +75,16 @@ cat <<END_OF_MSG
 - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -
 END_OF_MSG
 
-ln -sv /tools/bin/{bash,cat,echo,grep,pwd,sleep,stty} ${SYSROOT}/bin &&
+ln -sv /tools/bin/{bash,cat,echo,grep,login,passwd,pwd,sleep,stty} ${SYSROOT}/bin &&
+ln -sv /tools/sbin/{agetty,blkid} ${SYSROOT}/sbin &&
 ln -sv /tools/bin/file ${SYSROOT}/usr/bin &&
 ln -sv /tools/lib/libgcc_s.so{,.1} ${SYSROOT}/usr/lib &&
 ln -sv /tools/lib/libstd*so* ${SYSROOT}/usr/lib &&
 ln -sv bash ${SYSROOT}/bin/sh &&
+ln -sv ../run ${SYSROOT}/var/run &&
 echo "YAY" || exit $?
+
+if [ 1 -eq 0 ]; then
 
 cat << END_OF_MSG
 To enable some c++ tests in the Glibc and Binutils testsuites to link,
@@ -87,6 +93,8 @@ END_OF_MSG
 mkdir -pv ${SYSROOT}/usr/lib64 &&
 ln -sv /tools/lib/libstd*so* ${SYSROOT}/usr/lib64 &&
 echo "YAY" || exit $?
+
+fi
 
 popd
 echo "WOOT"
